@@ -1,0 +1,39 @@
+FROM debian:13 AS build
+
+ARG KERNEL_VERSION=6.18.15
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      bc bison build-essential ca-certificates curl dwarves flex git libelf-dev \
+      libssl-dev pkg-config python3 xz-utils && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+RUN git clone --depth 1 --branch "v${KERNEL_VERSION}" \
+      https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git linux
+
+COPY base.config /build/linux/.config
+WORKDIR /build/linux
+
+# Preserve Apple's/Kata's known-good VM configuration and add the netfilter
+# facilities required by Cilium L7/FQDN proxy redirection. Build these into the
+# kernel so the Debian OCI rootfs does not need matching kernel modules.
+RUN scripts/config --set-str LOCALVERSION "-erebor" && \
+    scripts/config --disable LOCALVERSION_AUTO && \
+    scripts/config --enable BPF_JIT && \
+    scripts/config --enable BPF_JIT_DEFAULT_ON && \
+    scripts/config --enable NETFILTER_XT_MATCH_SOCKET && \
+    scripts/config --enable NETFILTER_XT_TARGET_TPROXY && \
+    scripts/config --enable NETFILTER_XT_TARGET_MARK && \
+    scripts/config --enable NETFILTER_XT_TARGET_CT && \
+    scripts/config --enable NETFILTER_XT_MATCH_MARK && \
+    make olddefconfig && \
+    grep -qx 'CONFIG_BPF_JIT=y' .config && \
+    grep -qx 'CONFIG_HAVE_EBPF_JIT=y' .config && \
+    grep -qx 'CONFIG_NETFILTER_XT_MATCH_SOCKET=y' .config && \
+    grep -qx 'CONFIG_NETFILTER_XT_TARGET_TPROXY=y' .config && \
+    make -j"$(nproc)" Image
+
+FROM debian:13
+COPY --from=build /build/linux/arch/arm64/boot/Image /Image
+CMD ["sleep", "infinity"]

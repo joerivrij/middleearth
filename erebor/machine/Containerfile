@@ -12,3 +12,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       systemd-update-utmp.service console-getty.service
 
 RUN : > /etc/machine-id && : > /var/lib/dbus/machine-id
+
+# Kubernetes workloads such as Cilium use mount propagation for bpffs and
+# cgroup v2. Apple container machines are full Linux VMs, but their OCI-rootfs
+# boot leaves the guest mount tree private, so make it recursively shared
+# before k0s/containerd starts.
+COPY erebor-mount-propagation.service /etc/systemd/system/erebor-mount-propagation.service
+RUN systemctl enable erebor-mount-propagation.service
+
+# The private half remains in ~/.ssh on macOS. Ansible stages only the public
+# half in the ignored build-context directory before building this image.
+COPY ssh/id_apple_machine.pub /etc/ssh/apple_machine_authorized_keys
+RUN chmod 0644 /etc/ssh/apple_machine_authorized_keys && \
+    printf '%s\n' \
+      'PubkeyAuthentication yes' \
+      'PasswordAuthentication no' \
+      'AuthorizedKeysFile /etc/ssh/apple_machine_authorized_keys' \
+      > /etc/ssh/sshd_config.d/erebor.conf

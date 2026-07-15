@@ -1,0 +1,14 @@
+[Unit]
+Description=Enable recursive shared mount propagation for Kubernetes
+Documentation=https://docs.cilium.io/en/stable/operations/system_requirements/
+After=local-fs.target
+Before=k0scontroller.service
+ConditionPathIsMountPoint=/
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/mount --make-rshared /
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

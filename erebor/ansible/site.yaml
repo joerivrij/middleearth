@@ -3,7 +3,8 @@
   hosts: localhost
   gather_facts: false
   vars:
-    machine_dir: "{{ playbook_dir }}/../machine"
+    machine_dir: "{{ playbook_dir | dirname }}/machine"
+    staged_public_key: "{{ machine_dir }}/ssh/id_apple_machine.pub"
   tasks:
     - name: Check required local commands
       ansible.builtin.command:
@@ -17,10 +18,52 @@
         - container
         - kubectl
 
+    - name: Check for the Apple machine private key
+      ansible.builtin.stat:
+        path: "{{ apple_machine_ssh_private_key }}"
+      register: apple_private_key
+
+    - name: Check for the Apple machine public key
+      ansible.builtin.stat:
+        path: "{{ apple_machine_ssh_public_key }}"
+      register: apple_public_key
+
+    - name: Require the Apple machine SSH keypair
+      ansible.builtin.assert:
+        that:
+          - apple_private_key.stat.exists
+          - apple_public_key.stat.exists
+        fail_msg: >-
+          Create ~/.ssh/id_apple_machine first; see the Erebor README for the
+          one-time ssh-keygen command.
+
+    - name: Create the ignored SSH build-context directory
+      ansible.builtin.file:
+        path: "{{ staged_public_key | dirname }}"
+        state: directory
+        mode: "0700"
+
+    - name: Stage only the Apple machine public key for the image build
+      ansible.builtin.copy:
+        src: "{{ apple_machine_ssh_public_key }}"
+        dest: "{{ staged_public_key }}"
+        mode: "0644"
+
     - name: Start the Apple container service
       ansible.builtin.command:
         argv: [container, system, start]
       changed_when: false
+
+    - name: Check for the custom Erebor kernel
+      ansible.builtin.stat:
+        path: "{{ machine_kernel }}"
+      register: custom_kernel
+
+    - name: Build the Cilium-capable Erebor kernel
+      ansible.builtin.command:
+        argv: ["{{ playbook_dir | dirname }}/kernel/build.sh"]
+      when: not custom_kernel.stat.exists
+      changed_when: true
 
     - name: Build the Debian machine image
       ansible.builtin.command:
@@ -41,6 +84,15 @@
       changed_when: false
       failed_when: false
 
+    - name: Remove Erebor when recreation is explicitly requested
+      ansible.builtin.command:
+        argv: [container, machine, rm, "{{ machine_name }}"]
+      when:
+        - machine_recreate | bool
+        - machine_inspect.rc == 0
+      register: machine_removed
+      changed_when: true
+
     - name: Create the Erebor machine
       ansible.builtin.command:
         argv:
@@ -54,12 +106,29 @@
           - "{{ machine_cpus | string }}"
           - --memory
           - "{{ machine_memory }}"
-      when: machine_inspect.rc != 0
+          - --kernel
+          - "{{ machine_kernel }}"
+      when: machine_inspect.rc != 0 or machine_removed is changed
       changed_when: true
+
+    - name: Inspect the running Erebor machine
+      ansible.builtin.command:
+        argv: [container, machine, inspect, "{{ machine_name }}"]
+      register: running_machine
+      changed_when: false
+
+    - name: Register Erebor with its current machine address
+      ansible.builtin.add_host:
+        name: "{{ machine_name }}"
+        groups: container_machines
+        ansible_host: "{{ (running_machine.stdout | from_json | first).ipAddress }}"
+        ansible_user: "{{ lookup('env', 'USER') }}"
+        ansible_python_interpreter: /usr/bin/python3
+        ansible_ssh_private_key_file: "{{ apple_machine_ssh_private_key }}"
 
     - name: Wait for SSH on the machine
       ansible.builtin.wait_for:
-        host: "{{ hostvars[machine_name].ansible_host }}"
+        host: "{{ (running_machine.stdout | from_json | first).ipAddress }}"
         port: 22
         timeout: 180
 
@@ -87,9 +156,17 @@
       when: not k0s_binary.stat.exists
       changed_when: true
 
+    - name: Create the k0s configuration directory
+      ansible.builtin.file:
+        path: /etc/k0s
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
     - name: Install the k0s cluster configuration
       ansible.builtin.copy:
-        src: "{{ playbook_dir }}/../machine/k0s.yaml"
+        src: "{{ playbook_dir | dirname }}/machine/k0s.yaml"
         dest: /etc/k0s/k0s.yaml
         owner: root
         group: root
@@ -173,6 +250,19 @@
       delay: 2
       until: external_api_ready.rc == 0
 
+    - name: Check whether the Cilium namespace exists
+      ansible.builtin.command:
+        argv: [kubectl, get, namespace, cilium]
+      register: cilium_namespace
+      changed_when: false
+      failed_when: false
+
+    - name: Create the Cilium namespace
+      ansible.builtin.command:
+        argv: [kubectl, create, namespace, cilium]
+      when: cilium_namespace.rc != 0
+      changed_when: true
+
     - name: Check whether Cilium is already installed
       ansible.builtin.command:
         argv: [kubectl, get, daemonset, cilium, --namespace, cilium]
@@ -180,11 +270,11 @@
       changed_when: false
       failed_when: false
 
-    - name: Seed the Cilium release needed by Flux
+    - name: Seed or reconcile the Cilium release needed by Flux
       ansible.builtin.command:
         argv:
           - cilium
-          - install
+          - "{{ 'upgrade' if cilium_daemonset.rc == 0 else 'install' }}"
           - --version
           - "{{ cilium_version }}"
           - --namespace
@@ -196,6 +286,8 @@
           - --set
           - enableHostFirewall=false
           - --set
+          - l7Proxy=true
+          - --set
           - envoy.enabled=true
           - --set
           - operator.replicas=1
@@ -206,7 +298,6 @@
           - --wait
           - --wait-duration
           - 10m
-      when: cilium_daemonset.rc != 0
       changed_when: true
 
     - name: Wait for Cilium to become ready

@@ -24,6 +24,9 @@ spec:
       mode: kubernetes
     kubeProxyReplacement: false
     enableHostFirewall: false
+    # Erebor uses a custom Apple container-machine kernel with Cilium's
+    # netfilter requirements built in.
+    l7Proxy: true
     envoy:
       enabled: true
     operator:
