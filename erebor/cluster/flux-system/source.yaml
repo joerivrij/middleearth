@@ -6,5 +6,5 @@ metadata:
 spec:
   interval: 1m
   ref:
-    branch: main
+    branch: feat/add-experiments
   url: https://github.com/joerivrij/middleearth.git

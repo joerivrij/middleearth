@@ -220,9 +220,31 @@
       changed_when: false
       no_log: true
 
+    - name: Normalize the Erebor kubeconfig names
+      ansible.builtin.set_fact:
+        normalized_kubeconfig:
+          apiVersion: v1
+          kind: Config
+          clusters:
+            - name: erebor
+              cluster: >-
+                {{ (admin_kubeconfig.stdout | from_yaml).clusters[0].cluster
+                   | combine({'server': 'https://' ~ ansible_host ~ ':6443'}) }}
+          users:
+            - name: erebor-admin
+              user: "{{ (admin_kubeconfig.stdout | from_yaml).users[0].user }}"
+          contexts:
+            - name: erebor
+              context:
+                cluster: erebor
+                namespace: kube-system
+                user: erebor-admin
+          current-context: erebor
+      no_log: true
+
     - name: Store the kubeconfig on macOS
       ansible.builtin.copy:
-        content: "{{ admin_kubeconfig.stdout | regex_replace('https://localhost:6443', 'https://' ~ ansible_host ~ ':6443') }}\n"
+        content: "{{ normalized_kubeconfig | to_nice_yaml(indent=2, sort_keys=false) }}"
         dest: "{{ kubeconfig_path }}"
         mode: "0600"
       delegate_to: localhost
