@@ -1,0 +1,10 @@
+machine_name: erebor
+machine_image: local/erebor-machine:latest
+machine_cpus: 4
+machine_memory: 8G
+k0s_version: v1.33.2+k0s.0
+cilium_version: 1.18.6
+
+# Paths are resolved from the directory containing ansible.cfg.
+erebor_dir: "{{ playbook_dir }}/.."
+kubeconfig_path: "{{ erebor_dir }}/machine/kubeconfig"

@@ -1,0 +1,228 @@
+---
+- name: Create the Apple container machine
+  hosts: localhost
+  gather_facts: false
+  vars:
+    machine_dir: "{{ playbook_dir }}/../machine"
+  tasks:
+    - name: Check required local commands
+      ansible.builtin.command:
+        argv:
+          - sh
+          - -c
+          - "command -v {{ item }}"
+      changed_when: false
+      loop:
+        - cilium
+        - container
+        - kubectl
+
+    - name: Start the Apple container service
+      ansible.builtin.command:
+        argv: [container, system, start]
+      changed_when: false
+
+    - name: Build the Debian machine image
+      ansible.builtin.command:
+        argv:
+          - container
+          - build
+          - --tag
+          - "{{ machine_image }}"
+          - --file
+          - "{{ machine_dir }}/Containerfile"
+          - "{{ machine_dir }}"
+      changed_when: true
+
+    - name: Inspect the Erebor machine
+      ansible.builtin.command:
+        argv: [container, machine, inspect, "{{ machine_name }}"]
+      register: machine_inspect
+      changed_when: false
+      failed_when: false
+
+    - name: Create the Erebor machine
+      ansible.builtin.command:
+        argv:
+          - container
+          - machine
+          - create
+          - "{{ machine_image }}"
+          - --name
+          - "{{ machine_name }}"
+          - --cpus
+          - "{{ machine_cpus | string }}"
+          - --memory
+          - "{{ machine_memory }}"
+      when: machine_inspect.rc != 0
+      changed_when: true
+
+    - name: Wait for SSH on the machine
+      ansible.builtin.wait_for:
+        host: "{{ hostvars[machine_name].ansible_host }}"
+        port: 22
+        timeout: 180
+
+- name: Provision k0s over SSH
+  hosts: container_machines
+  gather_facts: true
+  become: true
+  tasks:
+    - name: Download the k0s installer
+      ansible.builtin.get_url:
+        url: https://get.k0s.sh
+        dest: /tmp/install-k0s.sh
+        mode: "0755"
+
+    - name: Check whether k0s is installed
+      ansible.builtin.stat:
+        path: /usr/local/bin/k0s
+      register: k0s_binary
+
+    - name: Install the pinned k0s version
+      ansible.builtin.command:
+        argv: [/tmp/install-k0s.sh]
+      environment:
+        K0S_VERSION: "{{ k0s_version }}"
+      when: not k0s_binary.stat.exists
+      changed_when: true
+
+    - name: Install the k0s cluster configuration
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../machine/k0s.yaml"
+        dest: /etc/k0s/k0s.yaml
+        owner: root
+        group: root
+        mode: "0644"
+      register: k0s_config
+
+    - name: Check whether the k0s service exists
+      ansible.builtin.stat:
+        path: /etc/systemd/system/k0scontroller.service
+      register: k0s_service
+
+    - name: Install the k0s controller and worker service
+      ansible.builtin.command:
+        argv:
+          - k0s
+          - install
+          - controller
+          - --enable-worker
+          - --no-taints
+          - --config
+          - /etc/k0s/k0s.yaml
+      when: not k0s_service.stat.exists
+      notify: Restart k0s
+      changed_when: true
+
+    - name: Enable and start k0s
+      ansible.builtin.systemd_service:
+        name: k0scontroller
+        enabled: true
+        state: started
+
+    - name: Restart k0s after a configuration change
+      ansible.builtin.systemd_service:
+        name: k0scontroller
+        state: restarted
+      when: k0s_config.changed and k0s_service.stat.exists
+
+    - name: Wait for the Kubernetes API inside Erebor
+      ansible.builtin.command:
+        argv: [k0s, kubectl, get, --raw=/readyz]
+      register: api_ready
+      changed_when: false
+      retries: 60
+      delay: 2
+      until: api_ready.rc == 0
+
+    - name: Generate the administrator kubeconfig
+      ansible.builtin.command:
+        argv: [k0s, kubeconfig, admin]
+      register: admin_kubeconfig
+      changed_when: false
+      no_log: true
+
+    - name: Store the kubeconfig on macOS
+      ansible.builtin.copy:
+        content: "{{ admin_kubeconfig.stdout | regex_replace('https://localhost:6443', 'https://' ~ ansible_host ~ ':6443') }}\n"
+        dest: "{{ kubeconfig_path }}"
+        mode: "0600"
+      delegate_to: localhost
+      become: false
+      no_log: true
+
+  handlers:
+    - name: Restart k0s
+      ansible.builtin.systemd_service:
+        name: k0scontroller
+        state: restarted
+
+- name: Seed Cilium from macOS
+  hosts: localhost
+  gather_facts: false
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  tasks:
+    - name: Wait for the externally reachable Kubernetes API
+      ansible.builtin.command:
+        argv: [kubectl, get, --raw=/readyz]
+      register: external_api_ready
+      changed_when: false
+      retries: 60
+      delay: 2
+      until: external_api_ready.rc == 0
+
+    - name: Check whether Cilium is already installed
+      ansible.builtin.command:
+        argv: [kubectl, get, daemonset, cilium, --namespace, cilium]
+      register: cilium_daemonset
+      changed_when: false
+      failed_when: false
+
+    - name: Seed the Cilium release needed by Flux
+      ansible.builtin.command:
+        argv:
+          - cilium
+          - install
+          - --version
+          - "{{ cilium_version }}"
+          - --namespace
+          - cilium
+          - --set
+          - ipam.mode=kubernetes
+          - --set
+          - kubeProxyReplacement=false
+          - --set
+          - enableHostFirewall=false
+          - --set
+          - envoy.enabled=true
+          - --set
+          - operator.replicas=1
+          - --set
+          - hubble.relay.enabled=true
+          - --set
+          - hubble.ui.enabled=true
+          - --wait
+          - --wait-duration
+          - 10m
+      when: cilium_daemonset.rc != 0
+      changed_when: true
+
+    - name: Wait for Cilium to become ready
+      ansible.builtin.command:
+        argv:
+          - cilium
+          - status
+          - --namespace
+          - cilium
+          - --wait
+          - --wait-duration
+          - 10m
+      changed_when: false
+
+    - name: Print the next step
+      ansible.builtin.debug:
+        msg: >-
+          Erebor is ready. Export KUBECONFIG={{ kubeconfig_path }} and run
+          {{ erebor_dir }}/bootstrap-flux.sh.

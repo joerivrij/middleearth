@@ -1,0 +1,88 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: rook-ceph-cluster
+spec:
+  interval: 10m
+  timeout: 30m
+  dependsOn:
+    - name: rook-ceph
+  chart:
+    spec:
+      chart: rook-ceph-cluster
+      version: v1.19.5
+      sourceRef:
+        kind: HelmRepository
+        name: rook-ceph
+  install:
+    remediation:
+      retries: -1
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    operatorNamespace: rook-ceph
+    toolbox:
+      enabled: false
+    monitoring:
+      enabled: false
+    cephFileSystems: []
+    cephObjectStoreUsers: []
+    cephFilesystemSubVolumeGroups: []
+    cephClusterSpec:
+      dataDirHostPath: /var/lib/rook
+      cephVersion:
+        image: quay.io/ceph/ceph:v19.2.3
+      crashCollector:
+        disable: true
+      mon:
+        count: 1
+        allowMultiplePerNode: true
+      mgr:
+        count: 1
+        allowMultiplePerNode: true
+      dashboard:
+        enabled: true
+      storage:
+        useAllNodes: true
+        useAllDevices: false
+        devices:
+          - name: vdb
+      cephConfig:
+        global:
+          osd_pool_default_size: "1"
+          mon_warn_on_pool_no_redundancy: "false"
+    cephBlockPools:
+      - name: replicapool
+        spec:
+          failureDomain: host
+          replicated:
+            size: 1
+            requireSafeReplicaSize: false
+        storageClass:
+          enabled: true
+          name: rook-ceph-block
+          isDefault: true
+          reclaimPolicy: Delete
+          allowVolumeExpansion: true
+          volumeBindingMode: Immediate
+    cephObjectStores:
+      - name: ceph-objectstore
+        spec:
+          metadataPool:
+            replicated:
+              size: 1
+              requireSafeReplicaSize: false
+          dataPool:
+            failureDomain: host
+            replicated:
+              size: 1
+              requireSafeReplicaSize: false
+          gateway:
+            port: 80
+            instances: 1
+        storageClass:
+          enabled: true
+          name: ceph-bucket
+          reclaimPolicy: Delete
+          volumeBindingMode: Immediate
