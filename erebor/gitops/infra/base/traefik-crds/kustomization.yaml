@@ -3,5 +3,5 @@ kind: Kustomization
 namespace: traefik
 resources:
   - ns.yaml
-  - repository.yaml
+  - repo.yaml
   - release.yaml

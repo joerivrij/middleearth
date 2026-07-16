@@ -21,6 +21,9 @@ spec:
     remediation:
       retries: 3
   values:
+    cephImage:
+      repository: quay.io/ceph/ceph
+      tag: v19.2.3
     operatorNamespace: rook-ceph
     toolbox:
       enabled: false
@@ -31,8 +34,6 @@ spec:
     cephFilesystemSubVolumeGroups: []
     cephClusterSpec:
       dataDirHostPath: /var/lib/rook
-      cephVersion:
-        image: quay.io/ceph/ceph:v19.2.3
       crashCollector:
         disable: true
       mon:

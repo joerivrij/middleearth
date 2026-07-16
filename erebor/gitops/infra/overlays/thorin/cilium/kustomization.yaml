@@ -3,4 +3,4 @@ kind: Kustomization
 resources:
   - ../../bilbo/cilium
 patches:
-  - path: patch-release.yaml
+  - path: release.yaml

@@ -1,10 +1,27 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  name: rook-ceph-crds
+  namespace: flux-system
+spec:
+  interval: 4h
+  retryInterval: 2m
+  timeout: 10m
+  path: ./erebor/gitops/infra/base/rook-ceph-crds
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: erebor
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
   name: rook-ceph
   namespace: flux-system
 spec:
   dependsOn:
+    - name: rook-ceph-crds
     - name: traefik-crds
   interval: 4h
   retryInterval: 2m

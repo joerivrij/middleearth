@@ -3,4 +3,4 @@ kind: Kustomization
 resources:
   - ../../thorin/rook-ceph
 patches:
-  - path: patch-cluster-release.yaml
+  - path: release.yaml

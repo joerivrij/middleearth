@@ -3,5 +3,6 @@ kind: Kustomization
 resources:
   - cert-manager.yaml
   - cilium.yaml
+  - rook-ceph-crds.yaml
   - rook-ceph.yaml
   - traefik.yaml

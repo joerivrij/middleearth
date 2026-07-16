@@ -3,4 +3,4 @@ kind: Kustomization
 resources:
   - ../../bilbo/rook-ceph
 patches:
-  - path: patch-cluster-release.yaml
+  - path: release.yaml

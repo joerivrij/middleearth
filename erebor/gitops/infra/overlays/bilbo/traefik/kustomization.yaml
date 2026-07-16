@@ -4,4 +4,4 @@ namespace: traefik
 resources:
   - ../../../base/traefik
 patches:
-  - path: patch-release.yaml
+  - path: release.yaml
