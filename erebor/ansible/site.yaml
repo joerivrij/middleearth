@@ -337,5 +337,5 @@
     - name: Print the next step
       ansible.builtin.debug:
         msg: >-
-          Erebor is ready. Export KUBECONFIG={{ kubeconfig_path }} and run
-          {{ erebor_dir }}/bootstrap-flux.sh.
+          Erebor is ready. Run make -C {{ erebor_dir }}/gitops
+          bootstrap-flux ENV=bilbo.

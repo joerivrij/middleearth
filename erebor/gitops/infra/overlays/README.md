@@ -1,7 +1,7 @@
 # Erebor overlays
 
 ```text
-overlays/
+gitops/infra/overlays/
 ├── bilbo
 ├── thorin
 └── smaug
@@ -34,3 +34,7 @@ The previous size names map as follows:
 | `bilbo` | Small |
 | `thorin` | Medium |
 | `smaug` | Large |
+
+Each environment is split into component-level Kustomize overlays. The Flux
+Kustomizations in `gitops/cluster/` reference those components separately
+instead of applying an entire environment in one reconciliation.

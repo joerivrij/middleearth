@@ -1,0 +1,33 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: traefik-crds
+  namespace: flux-system
+spec:
+  interval: 4h
+  retryInterval: 2m
+  timeout: 10m
+  path: ./erebor/gitops/infra/base/traefik-crds
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: erebor
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: traefik
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: traefik-crds
+  interval: 4h
+  retryInterval: 2m
+  timeout: 10m
+  path: ./erebor/gitops/infra/overlays/bilbo/traefik
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: erebor

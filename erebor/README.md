@@ -30,9 +30,8 @@ IP automatically. Neither Apple `.test` DNS nor your personal
 ```bash
 cd erebor/ansible
 ansible-playbook site.yaml
-cd ../..
-export KUBECONFIG="$PWD/erebor/machine/kubeconfig"
-./erebor/bootstrap-flux.sh
+cd ..
+make -C gitops bootstrap-flux ENV=bilbo
 ```
 
 The playbook first builds `kernel/Image`, using Apple's current machine kernel
@@ -68,6 +67,34 @@ The bootstrap assumes the repository is public. No Git credentials or deploy
 key are stored in the cluster. Commit the bootstrap manifests to `main` before
 expecting reconciliation to become ready.
 
+## GitOps layout
+
+Flux-specific files are kept below `gitops/`, separate from machine and Ansible
+provisioning:
+
+```text
+erebor/
+└── gitops/
+    ├── cluster/  # environment reconciliation entry points
+    └── infra/    # infrastructure bases and overlays
+```
+
+The Makefile bootstraps a GitRepository and one root Flux Kustomization pointing
+at `gitops/cluster/<environment>`. That root creates a separate Flux
+Kustomization for each infrastructure concern, so Cilium, cert-manager, Rook,
+Traefik CRDs, and Traefik reconcile and report status independently. Application
+and component directories can be added below `gitops/` when Erebor actually has
+resources for them.
+
+```bash
+make -C gitops bootstrap-bilbo
+make -C gitops bootstrap-thorin
+make -C gitops bootstrap-smaug
+
+# Or select the environment and branch explicitly.
+make -C gitops bootstrap-flux ENV=bilbo BRANCH=main
+```
+
 ## Cluster overlays
 
 - `bilbo` — “An Unexpected Journey”: the minimal, single-node development
@@ -77,9 +104,10 @@ expecting reconciliation to become ready.
 - `smaug` — “The Dragon’s Hoard”: large-scale storage and performance testing.
 
 Bilbo corresponds to the previous small overlay, Thorin to medium, and Smaug to
-large. See [the overlay guide](overlays/README.md) for the full
-story and infrastructure mapping. Select an environment by changing `spec.path`
-in `cluster/infrastructure.yaml` to the matching overlay.
+large. See [the overlay guide](gitops/infra/overlays/README.md) for the full
+story and infrastructure mapping. Select an environment with the Makefile
+bootstrap target; the selected cluster entry point then references its matching
+infrastructure overlays.
 
 The Ceph overlay still expects a raw `/dev/vdb` on every storage node. Apple
 container machines currently provide the system disk only, so Rook will remain

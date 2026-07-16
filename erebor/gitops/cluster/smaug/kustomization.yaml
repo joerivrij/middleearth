@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../thorin
+patches:
+  - target:
+      kind: Kustomization
+      name: cilium
+    patch: |-
+      - op: replace
+        path: /spec/path
+        value: ./erebor/gitops/infra/overlays/smaug/cilium
+  - target:
+      kind: Kustomization
+      name: traefik
+    patch: |-
+      - op: replace
+        path: /spec/path
+        value: ./erebor/gitops/infra/overlays/smaug/traefik
+  - target:
+      kind: Kustomization
+      name: rook-ceph
+    patch: |-
+      - op: replace
+        path: /spec/path
+        value: ./erebor/gitops/infra/overlays/smaug/rook-ceph
