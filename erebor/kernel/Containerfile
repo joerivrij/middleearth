@@ -22,6 +22,14 @@ RUN scripts/config --set-str LOCALVERSION "-erebor" && \
     scripts/config --disable LOCALVERSION_AUTO && \
     scripts/config --enable BPF_JIT && \
     scripts/config --enable BPF_JIT_DEFAULT_ON && \
+    scripts/config --enable BLK_DEV_LOOP && \
+    scripts/config --enable MD && \
+    scripts/config --enable BLK_DEV_DM && \
+    scripts/config --enable DM_CRYPT && \
+    scripts/config --enable DM_SNAPSHOT && \
+    scripts/config --enable DM_MIRROR && \
+    scripts/config --enable DM_ZERO && \
+    scripts/config --enable DM_THIN_PROVISIONING && \
     scripts/config --enable NETFILTER_XT_MATCH_SOCKET && \
     scripts/config --enable NETFILTER_XT_TARGET_TPROXY && \
     scripts/config --enable NETFILTER_XT_TARGET_MARK && \
@@ -30,6 +38,8 @@ RUN scripts/config --set-str LOCALVERSION "-erebor" && \
     make olddefconfig && \
     grep -qx 'CONFIG_BPF_JIT=y' .config && \
     grep -qx 'CONFIG_HAVE_EBPF_JIT=y' .config && \
+    grep -qx 'CONFIG_BLK_DEV_LOOP=y' .config && \
+    grep -qx 'CONFIG_BLK_DEV_DM=y' .config && \
     grep -qx 'CONFIG_NETFILTER_XT_MATCH_SOCKET=y' .config && \
     grep -qx 'CONFIG_NETFILTER_XT_TARGET_TPROXY=y' .config && \
     make -j"$(nproc)" Image

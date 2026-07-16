@@ -63,6 +63,20 @@ recreate an existing machine explicitly:
 ansible-playbook site.yaml -e machine_recreate=true
 ```
 
+Rook on Bilbo uses a 10 GiB sparse file attached as `/dev/loop0`, because Apple
+container machines do not currently expose a secondary-disk attachment option.
+The custom kernel includes loop and device-mapper support, and the Rook operator
+is explicitly configured to accept loop devices. This is test storage: it
+shares the VM's root disk and is not an HA or production Ceph layout.
+
+After changing the kernel configuration, rebuild it and recreate the VM:
+
+```bash
+ansible-playbook site.yaml \
+  -e kernel_rebuild=true \
+  -e machine_recreate=true
+```
+
 The bootstrap assumes the repository is public. No Git credentials or deploy
 key are stored in the cluster. Commit the bootstrap manifests to `main` before
 expecting reconciliation to become ready.
@@ -109,6 +123,6 @@ story and infrastructure mapping. Select an environment with the Makefile
 bootstrap target; the selected cluster entry point then references its matching
 infrastructure overlays.
 
-The Ceph overlay still expects a raw `/dev/vdb` on every storage node. Apple
-container machines currently provide the system disk only, so Rook will remain
-degraded until a raw device is attached or the storage experiment is disabled.
+Thorin and Smaug currently inherit Bilbo's loop-backed test device. Their HA
+replica settings describe the intended future multi-node topology; they require
+real, independent raw disks before they can provide meaningful redundancy.

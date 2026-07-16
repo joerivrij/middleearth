@@ -3,6 +3,7 @@ machine_image: local/erebor-machine:latest
 machine_cpus: 4
 machine_memory: 8G
 machine_recreate: false
+kernel_rebuild: false
 machine_kernel: "{{ erebor_dir }}/kernel/Image"
 apple_machine_ssh_private_key: "{{ lookup('env', 'HOME') }}/.ssh/id_apple_machine"
 apple_machine_ssh_public_key: "{{ apple_machine_ssh_private_key }}.pub"

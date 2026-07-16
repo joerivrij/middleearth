@@ -8,6 +8,10 @@ crds:
   # See https://rook.io/docs/rook/latest/Troubleshooting/disaster-recovery/.
   enabled: true
 
+# Apple container machines cannot attach a second block disk yet. Bilbo uses
+# the VM's dedicated /dev/loop0 test device created at boot.
+allowLoopDevices: true
+
 csi:
   # Use the standalone ceph-csi-operator instead of the in-tree CSI manager.
   rookUseCsiOperator: true

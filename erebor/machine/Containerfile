@@ -18,7 +18,10 @@ RUN : > /etc/machine-id && : > /var/lib/dbus/machine-id
 # boot leaves the guest mount tree private, so make it recursively shared
 # before k0s/containerd starts.
 COPY erebor-mount-propagation.service /etc/systemd/system/erebor-mount-propagation.service
-RUN systemctl enable erebor-mount-propagation.service
+COPY erebor-ceph-loop /usr/local/sbin/erebor-ceph-loop
+COPY erebor-ceph-loop.service /etc/systemd/system/erebor-ceph-loop.service
+RUN chmod 0755 /usr/local/sbin/erebor-ceph-loop && \
+    systemctl enable erebor-mount-propagation.service erebor-ceph-loop.service
 
 # The private half remains in ~/.ssh on macOS. Ansible stages only the public
 # half in the ignored build-context directory before building this image.
