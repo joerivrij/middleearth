@@ -1,0 +1,15 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: traefik
+spec:
+  values:
+    service:
+      type: NodePort
+      spec:
+        externalTrafficPolicy: Local
+    ports:
+      web:
+        nodePort: 30080
+      websecure:
+        nodePort: 30443
