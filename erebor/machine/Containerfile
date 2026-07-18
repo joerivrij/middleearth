@@ -20,6 +20,7 @@ RUN : > /etc/machine-id && : > /var/lib/dbus/machine-id
 COPY erebor-mount-propagation.service /etc/systemd/system/erebor-mount-propagation.service
 COPY erebor-ceph-loop /usr/local/sbin/erebor-ceph-loop
 COPY erebor-ceph-loop.service /etc/systemd/system/erebor-ceph-loop.service
+COPY modules/ /lib/modules/
 RUN chmod 0755 /usr/local/sbin/erebor-ceph-loop && \
     systemctl enable erebor-mount-propagation.service erebor-ceph-loop.service
 

@@ -6,6 +6,7 @@ KERNEL_VERSION="${KERNEL_VERSION:-6.18.15}"
 IMAGE="${KERNEL_IMAGE:-local/erebor-kernel:${KERNEL_VERSION}}"
 PROBE="erebor-kernel-config-probe"
 ARTIFACT="erebor-kernel-artifact"
+MACHINE_MODULES="${ROOT}/../machine/modules"
 
 command -v container >/dev/null || {
   echo "missing required command: container" >&2
@@ -31,7 +32,10 @@ container rm --force "${ARTIFACT}" >/dev/null 2>&1 || true
 container create --name "${ARTIFACT}" "${IMAGE}"
 container start "${ARTIFACT}"
 container cp "${ARTIFACT}:/Image" "${ROOT}/Image"
+rm -rf "${MACHINE_MODULES}"
+container cp "${ARTIFACT}:/modules/lib/modules" "${MACHINE_MODULES}"
 container rm --force "${ARTIFACT}"
 chmod 0644 "${ROOT}/Image"
 
 echo "custom Erebor kernel built at ${ROOT}/Image"
+echo "matching kernel modules staged at ${MACHINE_MODULES}"

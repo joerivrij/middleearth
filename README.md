@@ -3,9 +3,9 @@
 One repository to rule the homelab.
 
 `middleearth` is the container for everything I need to build, rebuild, and
-maintain my homelab systems. Right now the realm is small: it only contains
-`bree`, a bootstrap script for getting a fresh machine into a comfortable
-terminal shape. Over time this will grow into the full map for my homelab:
+maintain my homelab systems. It includes machine setup, infrastructure, and
+small experiments that make the systems easier to understand. Over time this
+will grow into the full map for my homelab:
 hosts, services, setup notes, automation, and whatever other spells are needed
 to bring the machines back from bare metal.
 
@@ -15,6 +15,10 @@ to bring the machines back from bare metal.
 middleearth/
 ├── bree/
 │   └── bootstrap.sh
+├── grey-havens/
+│   └── Go life-of-a-packet laboratory
+├── erebor/
+│   └── homelab infrastructure
 ├── LICENSE
 └── README.md
 ```
@@ -52,6 +56,20 @@ Then restart the SSH session or run:
 ```sh
 exec zsh
 ```
+
+## Grey Havens
+
+`grey-havens` is an interactive life-of-a-packet experiment. Its small Go
+service traces the DNS, TCP, TLS, and HTTP stages involved in fetching a URL and
+shows the resulting timeline in a local web page.
+
+```sh
+cd grey-havens
+go run .
+```
+
+Then visit <http://127.0.0.1:8080>. See [grey-havens/README.md](grey-havens/README.md)
+for details and possible next experiments.
 
 ## Future Realms
 

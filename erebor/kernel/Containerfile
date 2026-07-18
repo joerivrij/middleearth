@@ -4,7 +4,7 @@ ARG KERNEL_VERSION=6.18.15
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      bc bison build-essential ca-certificates curl dwarves flex git libelf-dev \
+      bc bison build-essential ca-certificates curl dwarves flex git kmod libelf-dev \
       libssl-dev pkg-config python3 xz-utils && \
     rm -rf /var/lib/apt/lists/*
 
@@ -22,6 +22,9 @@ RUN scripts/config --set-str LOCALVERSION "-erebor" && \
     scripts/config --disable LOCALVERSION_AUTO && \
     scripts/config --enable BPF_JIT && \
     scripts/config --enable BPF_JIT_DEFAULT_ON && \
+    scripts/config --enable MODULES && \
+    scripts/config --enable MODULE_UNLOAD && \
+    scripts/config --module BLK_DEV_RBD && \
     scripts/config --enable BLK_DEV_LOOP && \
     scripts/config --enable MD && \
     scripts/config --enable BLK_DEV_DM && \
@@ -38,12 +41,17 @@ RUN scripts/config --set-str LOCALVERSION "-erebor" && \
     make olddefconfig && \
     grep -qx 'CONFIG_BPF_JIT=y' .config && \
     grep -qx 'CONFIG_HAVE_EBPF_JIT=y' .config && \
+    grep -qx 'CONFIG_MODULES=y' .config && \
+    grep -qx 'CONFIG_BLK_DEV_RBD=m' .config && \
+    grep -qx 'CONFIG_CEPH_LIB=m' .config && \
     grep -qx 'CONFIG_BLK_DEV_LOOP=y' .config && \
     grep -qx 'CONFIG_BLK_DEV_DM=y' .config && \
     grep -qx 'CONFIG_NETFILTER_XT_MATCH_SOCKET=y' .config && \
     grep -qx 'CONFIG_NETFILTER_XT_TARGET_TPROXY=y' .config && \
-    make -j"$(nproc)" Image
+    make -j"$(nproc)" Image modules && \
+    make modules_install INSTALL_MOD_PATH=/modules
 
 FROM debian:13
 COPY --from=build /build/linux/arch/arm64/boot/Image /Image
+COPY --from=build /modules /modules
 CMD ["sleep", "infinity"]

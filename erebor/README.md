@@ -66,8 +66,10 @@ ansible-playbook site.yaml -e machine_recreate=true
 Rook on Bilbo uses a 10 GiB sparse file attached as `/dev/loop0`, because Apple
 container machines do not currently expose a secondary-disk attachment option.
 The custom kernel includes loop and device-mapper support, and the Rook operator
-is explicitly configured to accept loop devices. This is test storage: it
-shares the VM's root disk and is not an HA or production Ceph layout.
+is explicitly configured to accept loop devices. The kernel build also stages
+its matching loadable RBD and Ceph modules into the Debian machine image so
+Ceph-CSI can load `rbd.ko`. This is test storage: it shares the VM's root disk
+and is not an HA or production Ceph layout.
 
 After changing the kernel configuration, rebuild it and recreate the VM:
 
