@@ -1,0 +1,14 @@
+---
+common_packages:
+  - ca-certificates
+  - curl
+  - git
+  - jq
+  - openssh-client
+  - python3
+  - rsync
+  - tar
+  - unzip
+common_update_package_cache: true
+common_package_cache_valid_time: 3600
+

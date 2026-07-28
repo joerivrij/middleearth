@@ -1,0 +1,22 @@
+---
+- name: Create local Linux machines
+  hosts: machine_hosts
+  gather_facts: true
+  roles:
+    - role: machine
+      tags: [machine]
+
+- name: Prepare created Linux machines
+  hosts: provisioned_machines
+  become: true
+  gather_facts: true
+  roles:
+    - role: common
+      tags: [common]
+    - role: users
+      tags: [users]
+    - role: ssh
+      tags: [ssh]
+    - role: tooling
+      tags: [tooling]
+

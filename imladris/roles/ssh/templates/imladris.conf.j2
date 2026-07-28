@@ -1,0 +1,9 @@
+# Managed by Ansible (Imladris).
+Port {{ ssh_port }}
+PasswordAuthentication {{ ssh_password_authentication | ternary('yes', 'no') }}
+PermitRootLogin {{ ssh_permit_root_login }}
+PubkeyAuthentication yes
+{% if ssh_allow_groups | length > 0 %}
+AllowGroups {{ ssh_allow_groups | join(' ') }}
+{% endif %}
+

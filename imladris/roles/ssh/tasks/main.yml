@@ -1,0 +1,30 @@
+---
+- name: Install the OpenSSH server
+  ansible.builtin.package:
+    name: openssh-server
+    state: present
+
+- name: Ensure the SSH drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Configure the SSH daemon
+  ansible.builtin.template:
+    src: imladris.conf.j2
+    dest: /etc/ssh/sshd_config.d/60-imladris.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/sbin/sshd -t -f %s
+  notify: Restart SSH
+
+- name: Ensure the SSH service is enabled
+  ansible.builtin.service:
+    name: "{{ 'ssh' if ansible_facts.os_family == 'Debian' else 'sshd' }}"
+    enabled: true
+    state: started
+

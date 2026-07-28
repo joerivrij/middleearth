@@ -1,0 +1,13 @@
+[Unit]
+Description=Attach Erebor's loop-backed Ceph test disk
+After=local-fs.target
+Before=k0scontroller.service
+
+[Service]
+Type=oneshot
+Environment=EREBOR_CEPH_DISK_SIZE=10G
+ExecStart=/usr/local/sbin/erebor-ceph-loop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

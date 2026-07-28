@@ -1,0 +1,10 @@
+---
+- name: Import host preparation
+  ansible.builtin.import_playbook: prepare.yml
+
+- name: Import host networking preparation
+  ansible.builtin.import_playbook: networking.yml
+
+- name: Import k0s preparation
+  ansible.builtin.import_playbook: k0s.yml
+

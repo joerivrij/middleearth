@@ -1,0 +1,15 @@
+[Unit]
+Description=Amon Sul advertised dummy prefix
+Before=frr.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'ip link show {{ bgp_dummy_interface }} >/dev/null 2>&1 || ip link add {{ bgp_dummy_interface }} type dummy'
+ExecStart=/bin/sh -c 'ip address replace {{ bgp_advertised_prefix }} dev {{ bgp_dummy_interface }}'
+ExecStart=/bin/sh -c 'ip link set {{ bgp_dummy_interface }} up'
+ExecStop=/bin/sh -c 'ip link delete {{ bgp_dummy_interface }} 2>/dev/null || true'
+
+[Install]
+WantedBy=multi-user.target
+

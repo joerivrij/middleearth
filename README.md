@@ -19,6 +19,12 @@ middleearth/
 │   └── Go life-of-a-packet laboratory
 ├── erebor/
 │   └── homelab infrastructure
+├── khazad-dum/
+│   └── reusable Kubernetes platform
+├── imladris/
+│   └── reusable Linux host provisioning
+├── amonsul/
+│   └── hands-on BGP learning lab
 ├── LICENSE
 └── README.md
 ```
@@ -70,6 +76,27 @@ go run .
 
 Then visit <http://127.0.0.1:8080>. See [grey-havens/README.md](grey-havens/README.md)
 for details and possible next experiments.
+
+## Khazad-dûm
+
+`khazad-dum` is the shared Kubernetes platform for every realm. Flux reconciles
+the Cilium, Traefik, cert-manager, and metrics-server foundation, while separate
+cluster definitions provide an extension point for Erebor, Grey Havens, and
+future labs. See [khazad-dum/README.md](khazad-dum/README.md).
+
+## Imladris
+
+`imladris` is the reusable Ansible foundation for preparing Linux hosts. Its
+modular roles configure packages, users, SSH, k0s, optional containerd,
+optional OVS/OVN, operator tooling, Raspberry Pis, and VMs without deploying
+applications. See [imladris/README.md](imladris/README.md).
+
+## Amon Sûl
+
+`amonsul` is a two-node BGP learning lab. Ansible configures FRRouting and a
+private prefix on each host, verifies eBGP route exchange and kernel
+installation, and demonstrates withdrawal and re-advertisement. See
+[amonsul/README.md](amonsul/README.md).
 
 ## Future Realms
 

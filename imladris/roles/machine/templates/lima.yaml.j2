@@ -1,0 +1,28 @@
+# Managed by Ansible (Imladris).
+vmType: "{{ machine_lima_vm_type }}"
+os: Linux
+
+images:
+  - location: "{{ machine_lima_image_arm64
+      if ansible_facts.architecture == 'arm64'
+      else machine_lima_image_x86_64 }}"
+    arch: "{{ machine_architecture_map[ansible_facts.architecture] }}"
+
+cpus: {{ machine_cpus }}
+memory: "{{ machine_memory_gib }}GiB"
+disk: "{{ machine_disk_gib }}GiB"
+
+networks:
+  - {{ machine_lima_network }}: true
+
+{% if machine_lima_mount_home %}
+mounts:
+  - location: "~"
+    writable: false
+{% else %}
+mounts: []
+{% endif %}
+
+containerd:
+  system: false
+  user: false

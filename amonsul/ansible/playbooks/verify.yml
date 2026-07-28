@@ -1,0 +1,61 @@
+---
+- name: Verify BGP adjacency and exchanged routes
+  hosts: bgp_nodes
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Query the BGP neighbor
+      ansible.builtin.command:
+        argv:
+          - vtysh
+          - -c
+          - "show bgp neighbor {{ bgp_neighbor_ip }} json"
+      register: bgp_neighbor_result
+      changed_when: false
+
+    - name: Parse the BGP neighbor state
+      ansible.builtin.set_fact:
+        bgp_neighbor_data: "{{ bgp_neighbor_result.stdout | from_json }}"
+
+    - name: Assert that the eBGP session is established
+      ansible.builtin.assert:
+        that:
+          - bgp_neighbor_data[bgp_neighbor_ip].bgpState == "Established"
+          - bgp_neighbor_data[bgp_neighbor_ip].remoteAs | int == bgp_neighbor_asn | int
+        success_msg: "{{ inventory_hostname }} has an Established eBGP session."
+
+    - name: Query the learned BGP prefix
+      ansible.builtin.command:
+        argv:
+          - vtysh
+          - -c
+          - "show bgp ipv4 unicast {{ bgp_remote_prefix }} json"
+      register: bgp_route_result
+      changed_when: false
+
+    - name: Assert that FRR learned the remote prefix
+      ansible.builtin.assert:
+        that:
+          - bgp_remote_prefix in bgp_route_result.stdout
+          - >-
+            '"valid":true' in
+            (bgp_route_result.stdout | regex_replace('\\s+', ''))
+        success_msg: "FRR learned {{ bgp_remote_prefix }}."
+
+    - name: Query the Linux route to the remote prefix
+      ansible.builtin.command:
+        argv:
+          - ip
+          - route
+          - show
+          - "{{ bgp_remote_prefix }}"
+      register: kernel_route_result
+      changed_when: false
+
+    - name: Assert that Zebra installed the route
+      ansible.builtin.assert:
+        that:
+          - kernel_route_result.stdout | length > 0
+          - "'proto bgp' in kernel_route_result.stdout"
+          - bgp_neighbor_ip in kernel_route_result.stdout
+        success_msg: "Linux installed {{ bgp_remote_prefix }} via {{ bgp_neighbor_ip }}."

@@ -1,0 +1,15 @@
+---
+k0s_version: v1.36.2+k0s.0
+k0s_node_role: controller
+k0s_controller_enable_worker: false
+k0s_controller_single: false
+k0s_config_path: /etc/k0s/k0s.yaml
+k0s_data_dir: /var/lib/k0s
+k0s_worker_token: ""
+k0s_binary_checksums: {}
+k0s_architecture_map:
+  x86_64: amd64
+  aarch64: arm64
+  arm64: arm64
+  armv7l: arm
+

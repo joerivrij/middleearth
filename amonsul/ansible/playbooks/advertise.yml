@@ -1,0 +1,23 @@
+---
+- name: Re-advertise the withdrawn prefix
+  hosts: withdraw_target
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Start the dummy prefix service
+      ansible.builtin.systemd_service:
+        name: amonsul-dummy.service
+        state: started
+
+    - name: Wait for FRR to originate the local prefix
+      ansible.builtin.command:
+        argv:
+          - vtysh
+          - -c
+          - "show bgp ipv4 unicast {{ bgp_advertised_prefix }} json"
+      register: advertised_local_route
+      changed_when: false
+      retries: 10
+      delay: 1
+      until: bgp_advertised_prefix in advertised_local_route.stdout
+

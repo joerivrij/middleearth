@@ -1,0 +1,102 @@
+---
+- name: Validate k0s role inputs
+  ansible.builtin.assert:
+    that:
+      - k0s_node_role in ["controller", "worker"]
+      - ansible_facts.architecture in k0s_architecture_map
+      - k0s_node_role != "worker" or k0s_worker_token | length > 0
+      - not (k0s_controller_single and k0s_controller_enable_worker)
+    fail_msg: "Check k0s_node_role, architecture, controller mode, and worker token."
+
+- name: Set the k0s download architecture
+  ansible.builtin.set_fact:
+    k0s_download_arch: "{{ k0s_architecture_map[ansible_facts.architecture] }}"
+
+- name: Download the pinned k0s binary
+  ansible.builtin.get_url:
+    url: "https://github.com/k0sproject/k0s/releases/download/{{ k0s_version }}/k0s-{{ k0s_version }}-{{ k0s_download_arch }}"
+    dest: /usr/local/bin/k0s
+    owner: root
+    group: root
+    mode: "0755"
+    checksum: "{{ k0s_binary_checksums.get(k0s_download_arch, omit) }}"
+  notify: Restart k0s
+
+- name: Ensure the k0s configuration directory exists
+  ansible.builtin.file:
+    path: "{{ k0s_config_path | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: k0s_node_role == "controller"
+
+- name: Configure the k0s controller
+  ansible.builtin.template:
+    src: k0s.yaml.j2
+    dest: "{{ k0s_config_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  when: k0s_node_role == "controller"
+  notify: Restart k0s
+
+- name: Ensure the k0s data directory exists
+  ansible.builtin.file:
+    path: "{{ k0s_data_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  when: k0s_node_role == "worker"
+
+- name: Store the k0s worker token
+  ansible.builtin.copy:
+    content: "{{ k0s_worker_token }}\n"
+    dest: "{{ k0s_data_dir }}/join-token"
+    owner: root
+    group: root
+    mode: "0600"
+  when: k0s_node_role == "worker"
+  no_log: true
+  notify: Restart k0s
+
+- name: Check for an installed k0s controller service
+  ansible.builtin.stat:
+    path: /etc/systemd/system/k0scontroller.service
+  register: k0s_controller_service
+
+- name: Check for an installed k0s worker service
+  ansible.builtin.stat:
+    path: /etc/systemd/system/k0sworker.service
+  register: k0s_worker_service
+
+- name: Install the k0s controller service
+  ansible.builtin.command:
+    argv: "{{ ['k0s', 'install', 'controller', '--config', k0s_config_path]
+      + (['--enable-worker', '--no-taints'] if k0s_controller_enable_worker else [])
+      + (['--single'] if k0s_controller_single else []) }}"
+  when:
+    - k0s_node_role == "controller"
+    - not k0s_controller_service.stat.exists
+  changed_when: true
+
+- name: Install the k0s worker service
+  ansible.builtin.command:
+    argv:
+      - k0s
+      - install
+      - worker
+      - --token-file
+      - "{{ k0s_data_dir }}/join-token"
+  when:
+    - k0s_node_role == "worker"
+    - not k0s_worker_service.stat.exists
+  changed_when: true
+
+- name: Enable and start k0s
+  ansible.builtin.service:
+    name: "{{ 'k0scontroller' if k0s_node_role == 'controller' else 'k0sworker' }}"
+    enabled: true
+    state: started
+

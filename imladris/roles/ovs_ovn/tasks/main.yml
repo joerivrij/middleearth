@@ -1,0 +1,32 @@
+---
+- name: Install optional OVS and OVN support
+  when: ovs_ovn_install
+  block:
+    - name: Validate the OVS and OVN operating system
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.os_family in ["Debian", "RedHat"]
+        fail_msg: "The ovs_ovn role supports Debian and RedHat families."
+
+    - name: Select OVS and OVN packages and services
+      ansible.builtin.set_fact:
+        ovs_ovn_packages: "{{ ovs_ovn_packages_debian
+          if ansible_facts.os_family == 'Debian'
+          else ovs_ovn_packages_redhat }}"
+        ovs_ovn_services: "{{ ovs_ovn_services_debian
+          if ansible_facts.os_family == 'Debian'
+          else ovs_ovn_services_redhat }}"
+
+    - name: Install OVS and OVN packages
+      ansible.builtin.package:
+        name: "{{ ovs_ovn_packages }}"
+        state: present
+
+    - name: Enable OVS and OVN host services
+      ansible.builtin.service:
+        name: "{{ item }}"
+        enabled: true
+        state: started
+      loop: "{{ ovs_ovn_services }}"
+      when: ovs_ovn_enable_services
+

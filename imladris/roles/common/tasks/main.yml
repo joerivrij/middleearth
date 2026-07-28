@@ -1,0 +1,20 @@
+---
+- name: Assert a supported operating system family
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.os_family in ["Debian", "RedHat"]
+    fail_msg: "The common role supports Debian and RedHat families."
+
+- name: Refresh the APT package cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: "{{ common_package_cache_valid_time }}"
+  when:
+    - common_update_package_cache
+    - ansible_facts.os_family == "Debian"
+
+- name: Install common packages
+  ansible.builtin.package:
+    name: "{{ common_packages }}"
+    state: present
+

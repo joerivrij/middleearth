@@ -1,0 +1,6 @@
+---
+containerd_install: false
+containerd_package_name: containerd
+containerd_configure: true
+containerd_systemd_cgroup: true
+

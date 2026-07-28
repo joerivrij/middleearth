@@ -1,0 +1,23 @@
+---
+- name: Validate local machine inputs
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.system == "Darwin"
+      - machine_backend in ["lima", "container"]
+      - machine_backend_filter in ["all", "lima", "container"]
+      - machine_state in ["present", "absent"]
+      - machine_name | length > 0
+      - ansible_facts.architecture in machine_architecture_map
+    fail_msg: "Local machines require macOS and a lima or container backend."
+
+- name: Manage a Lima machine
+  ansible.builtin.include_tasks: lima.yml
+  when:
+    - machine_backend == "lima"
+    - machine_backend_filter in ["all", "lima"]
+
+- name: Manage an Apple Container Machine
+  ansible.builtin.include_tasks: container.yml
+  when:
+    - machine_backend == "container"
+    - machine_backend_filter in ["all", "container"]

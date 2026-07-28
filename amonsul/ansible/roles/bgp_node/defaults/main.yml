@@ -1,0 +1,11 @@
+---
+bgp_asn: null
+bgp_router_id: ""
+bgp_neighbor_ip: ""
+bgp_neighbor_asn: null
+bgp_advertised_prefix: ""
+bgp_remote_prefix: ""
+bgp_dummy_interface: amonsul0
+bgp_frr_package: frr
+bgp_enable_ipv4_forwarding: true
+

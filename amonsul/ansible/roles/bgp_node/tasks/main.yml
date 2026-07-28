@@ -1,0 +1,84 @@
+---
+- name: Validate BGP node variables
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.os_family == "Debian"
+      - bgp_asn | int >= 64512
+      - bgp_asn | int <= 65534
+      - bgp_neighbor_asn | int >= 64512
+      - bgp_neighbor_asn | int <= 65534
+      - bgp_asn | int != bgp_neighbor_asn | int
+      - bgp_router_id | length > 0
+      - bgp_neighbor_ip | length > 0
+      - bgp_advertised_prefix | length > 0
+      - bgp_remote_prefix | length > 0
+    fail_msg: "Use Debian-family hosts, unique private ASNs, LAN addresses, and prefixes."
+
+- name: Install FRRouting and IP tools
+  ansible.builtin.apt:
+    name:
+      - frr
+      - iproute2
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Enable IPv4 forwarding
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: "1"
+    state: present
+    sysctl_file: /etc/sysctl.d/90-amonsul.conf
+    reload: true
+  when: bgp_enable_ipv4_forwarding
+
+- name: Enable Zebra
+  ansible.builtin.lineinfile:
+    path: /etc/frr/daemons
+    regexp: '^zebra='
+    line: zebra=yes
+  notify: Restart FRR
+
+- name: Enable BGP
+  ansible.builtin.lineinfile:
+    path: /etc/frr/daemons
+    regexp: '^bgpd='
+    line: bgpd=yes
+  notify: Restart FRR
+
+- name: Configure the dummy advertised prefix service
+  ansible.builtin.template:
+    src: amonsul-dummy.service.j2
+    dest: /etc/systemd/system/amonsul-dummy.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart dummy prefix
+
+- name: Configure FRRouting
+  ansible.builtin.template:
+    src: frr.conf.j2
+    dest: /etc/frr/frr.conf
+    owner: frr
+    group: frr
+    mode: "0640"
+    validate: /usr/bin/vtysh -C -f %s
+  notify: Restart FRR
+
+- name: Apply service changes before verification
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start the dummy prefix
+  ansible.builtin.systemd_service:
+    name: amonsul-dummy.service
+    enabled: true
+    state: started
+
+- name: Enable and start FRR
+  ansible.builtin.service:
+    name: frr
+    enabled: true
+    state: started
+

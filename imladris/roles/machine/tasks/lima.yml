@@ -1,0 +1,109 @@
+---
+- name: Check for limactl
+  ansible.builtin.command:
+    argv: [sh, -c, "command -v limactl"]
+  changed_when: false
+
+- name: Inspect the Lima machine
+  ansible.builtin.command:
+    argv:
+      - limactl
+      - list
+      - "--format={{ '{{.Name}} {{.Status}}' }}"
+  register: lima_machine_list
+  changed_when: false
+
+- name: Record the Lima machine state
+  ansible.builtin.set_fact:
+    lima_machine_exists: >-
+      {{ lima_machine_list.stdout_lines
+        | select('match', '^' ~ machine_name ~ ' ')
+        | list
+        | length > 0 }}
+    lima_machine_running: >-
+      {{ (machine_name ~ ' Running') in lima_machine_list.stdout_lines }}
+
+- name: Stop the Lima machine before deletion
+  ansible.builtin.command:
+    argv: [limactl, stop, "{{ machine_name }}"]
+  when:
+    - machine_state == "absent"
+    - lima_machine_exists
+  changed_when: true
+  failed_when: false
+
+- name: Delete the Lima machine
+  ansible.builtin.command:
+    argv: [limactl, delete, --force, "{{ machine_name }}"]
+  when:
+    - machine_state == "absent"
+    - lima_machine_exists
+  changed_when: true
+
+- name: Create the Lima configuration directory
+  ansible.builtin.file:
+    path: "{{ machine_container_build_root }}/lima"
+    state: directory
+    mode: "0700"
+  when: machine_state == "present"
+
+- name: Render the Lima machine configuration
+  ansible.builtin.template:
+    src: lima.yaml.j2
+    dest: "{{ machine_container_build_root }}/lima/{{ machine_name }}.yaml"
+    mode: "0600"
+  when: machine_state == "present"
+
+- name: Create and start the Lima machine
+  ansible.builtin.command:
+    argv:
+      - limactl
+      - start
+      - --yes
+      - "--name={{ machine_name }}"
+      - "{{ machine_container_build_root }}/lima/{{ machine_name }}.yaml"
+  when:
+    - machine_state == "present"
+    - not lima_machine_exists
+  changed_when: true
+
+- name: Start an existing Lima machine
+  ansible.builtin.command:
+    argv: [limactl, start, "{{ machine_name }}"]
+  when:
+    - machine_state == "present"
+    - lima_machine_exists
+    - not lima_machine_running
+  changed_when: true
+
+- name: Find the Lima SSH configuration
+  ansible.builtin.command:
+    argv:
+      - limactl
+      - list
+      - "--format={{ '{{.SSHConfigFile}}' }}"
+      - "{{ machine_name }}"
+  register: lima_ssh_config
+  changed_when: false
+  when: machine_state == "present"
+
+- name: Register the Lima guest for Linux preparation
+  ansible.builtin.add_host:
+    name: "lima-{{ machine_name }}"
+    groups: provisioned_machines
+    ansible_host: "lima-{{ machine_name }}"
+    ansible_connection: ssh
+    ansible_ssh_common_args: "-F {{ lima_ssh_config.stdout | trim }}"
+    ansible_python_interpreter: /usr/bin/python3
+    imladris_users: "{{ imladris_users | default([]) }}"
+  when: machine_state == "present"
+
+- name: Wait for the Lima guest
+  ansible.builtin.command:
+    argv: [limactl, shell, "{{ machine_name }}", "true"]
+  register: lima_guest_ready
+  changed_when: false
+  retries: 30
+  delay: 2
+  until: lima_guest_ready.rc == 0
+  when: machine_state == "present"

@@ -1,0 +1,8 @@
+---
+- name: Prepare OVS and OVN hosts
+  hosts: ovs_ovn
+  become: true
+  roles:
+    - role: ovs_ovn
+      tags: [ovs_ovn]
+

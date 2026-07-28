@@ -1,0 +1,5 @@
+---
+- name: Reboot required
+  ansible.builtin.debug:
+    msg: "Raspberry Pi boot settings changed; reboot the host before installing k0s."
+
