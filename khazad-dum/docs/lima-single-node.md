@@ -4,9 +4,8 @@ This walkthrough creates one Debian Lima VM, installs a single-node k0s
 controller with Imladris, seeds Cilium, and then installs Flux and the
 Khazad-dûm platform.
 
-It uses the generic `clusters/example` platform definition. It deliberately
-does not use `clusters/erebor/bilbo`, because Bilbo also installs the
-Erebor-specific Traefik configuration and Rook/Ceph.
+It uses the core-only `clusters/khazad-dum` definition. Optional labs from
+Azanulbizar are not enabled by default.
 
 ## Prerequisites
 
@@ -78,7 +77,7 @@ created with `network.provider: custom` and Cilium has not been installed yet.
 
 Flux controllers are normal pods and cannot start without a functioning CNI.
 The install target first seeds the same Cilium minor version that Khazad-dûm
-manages, then installs Flux and reconciles `clusters/example`:
+manages, then installs Flux and reconciles `clusters/khazad-dum`:
 
 ```sh
 cd ../khazad-dum

@@ -5,7 +5,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 10m
-  path: ./infrastructure/eck-operator
+  path: ./isengard/infrastructure/eck-operator
   prune: true
   sourceRef:
     kind: GitRepository
@@ -22,11 +22,10 @@ spec:
   dependsOn:
     - name: isengard-operator
   interval: 10m
-  path: ./stacks/overlays/wormtongue
+  path: ./isengard/stacks/overlays/wormtongue
   prune: true
   sourceRef:
     kind: GitRepository
     name: isengard
   timeout: 15m
   wait: true
-

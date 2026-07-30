@@ -36,5 +36,5 @@ The previous size names map as follows:
 | `smaug` | Large |
 
 Each environment is split into component-level Kustomize overlays. The Flux
-Kustomizations in `clusters/erebor/` reference those components separately
+Kustomizations in `erebor/clusters/` reference those components separately
 instead of applying an entire environment in one reconciliation.

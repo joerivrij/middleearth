@@ -9,11 +9,10 @@ spec:
     secretRef:
       name: gondolin-sops-gpg
   interval: 10m
-  path: ./secrets/example
+  path: ./gondolin/secrets/example
   prune: true
   sourceRef:
     kind: GitRepository
     name: gondolin
   timeout: 5m
   wait: true
-

@@ -5,7 +5,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 10m
-  path: ./infrastructure/kyverno
+  path: ./morannon/infrastructure/kyverno
   prune: true
   sourceRef:
     kind: GitRepository
@@ -22,11 +22,10 @@ spec:
   dependsOn:
     - name: morannon-kyverno
   interval: 10m
-  path: ./policies/baseline
+  path: ./morannon/policies/baseline
   prune: true
   sourceRef:
     kind: GitRepository
     name: morannon
   timeout: 10m
   wait: true
-

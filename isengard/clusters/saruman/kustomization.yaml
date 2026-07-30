@@ -9,5 +9,4 @@ patches:
     patch: |-
       - op: replace
         path: /spec/path
-        value: ./stacks/overlays/saruman
-
+        value: ./isengard/stacks/overlays/saruman

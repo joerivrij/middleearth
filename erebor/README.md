@@ -34,7 +34,7 @@ IP automatically. Neither Apple `.test` DNS nor your personal
 
 ```bash
 make -C imladris erebor
-make -C khazad-dum bootstrap-erebor ENV=bilbo \
+make -C khazad-dum bootstrap CLUSTER=khazad-dum \
   KUBECONFIG=../erebor/machine/kubeconfig
 ```
 
@@ -100,8 +100,12 @@ imladris/
 
 khazad-dum/
 ├── infrastructure/base/         # shared Kubernetes platform
-├── apps/erebor/                  # optional Erebor storage and overlays
-└── clusters/erebor/              # Bilbo, Thorin, and Smaug composition
+└── clusters/khazad-dum/
+    └── azanulbizar/erebor.yaml   # stable opt-in Erebor entrypoint
+
+erebor/
+├── cluster/                      # selects one Erebor overlay
+└── clusters/                     # Bilbo, Thorin, and Smaug composition
 ```
 
 Imladris owns machine lifecycle, reusable Linux roles, k0s installation, and
@@ -109,11 +113,9 @@ kubeconfig generation. Erebor keeps only its custom kernel and machine-image
 assets. Khazad-dûm owns Flux, Cilium, cert-manager, Traefik, metrics-server, and
 the optional Rook/Ceph addition selected by Erebor.
 
-```bash
-make -C khazad-dum bootstrap-erebor ENV=bilbo
-make -C khazad-dum bootstrap-erebor ENV=thorin
-make -C khazad-dum bootstrap-erebor ENV=smaug
-```
+Select an overlay only in `erebor/cluster/kustomization.yaml`, then enable
+`azanulbizar/erebor.yaml` in Khazad-dûm. Khazad-dûm never needs to know which
+Erebor overlay is active.
 
 ## Cluster overlays
 
@@ -126,8 +128,7 @@ make -C khazad-dum bootstrap-erebor ENV=smaug
 Bilbo corresponds to the previous small overlay, Thorin to medium, and Smaug to
 large. See the
 [overlay guide](../khazad-dum/apps/erebor/overlays/README.md) for the full story
-and infrastructure mapping. The selected Khazad-dûm cluster entry point
-references its matching add-on overlays.
+and infrastructure mapping.
 
 Thorin and Smaug currently inherit Bilbo's loop-backed test device. Their HA
 replica settings describe the intended future multi-node topology; they require

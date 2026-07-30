@@ -21,9 +21,10 @@ khazad-dum/
 ├── apps/                         # optional, platform-owned applications
 │   └── erebor/                   # optional Erebor storage and overlays
 ├── clusters/
-│   └── example/
-│       ├── kustomization.yaml    # cluster reconciliation entrypoint
-│       └── platform.yaml         # composes the reusable platform
+│   └── khazad-dum/
+│       ├── kustomization.yaml    # core plus selected optional labs
+│       ├── core.yaml             # composes the reusable platform
+│       └── azanulbizar/          # opt-in lab reconciliation catalog
 ├── infrastructure/
 │   └── base/
 │       ├── cilium/
@@ -45,8 +46,7 @@ The target cluster must be reachable and created without another CNI if Cilium
 is to be its primary CNI. Install `flux` and `kubectl`, then:
 
 ```sh
-cp -R clusters/example clusters/my-cluster
-make bootstrap CLUSTER=my-cluster \
+make bootstrap CLUSTER=khazad-dum \
   REPO_URL=https://github.com/joerivrij/middleearth.git \
   BRANCH=feat/add-experiments
 ```
@@ -66,60 +66,28 @@ make install
 ```
 
 This uses Imladris's generated kubeconfig, seeds Cilium so the Flux
-controllers can start, and reconciles `clusters/example`.
-
-Erebor uses k0s with a custom CNI, so Cilium must exist before Flux controllers
-can become ready. Its convenience target seeds the same Cilium minor version
-managed by the base, then bootstraps the selected Erebor definition:
-
-```sh
-make bootstrap-erebor ENV=bilbo \
-  KUBECONFIG=../erebor/machine/kubeconfig \
-  REPO_URL=https://github.com/joerivrij/middleearth.git \
-  BRANCH=feat/add-experiments
-```
+controllers can start, and reconciles `clusters/khazad-dum`.
 
 For a production repository, `flux bootstrap github` is also a good option
 because it configures deploy credentials. Its sync path should be
 `khazad-dum/clusters/<name>`.
 
-## Add a lab
+## Enter Azanulbizar
 
-A lab remains in its own repository. Add two manifests to the relevant cluster
-directory and list them in that directory's `kustomization.yaml`:
+Optional labs are catalogued in `clusters/khazad-dum/azanulbizar`. The core
+does not include any of them by default. Enable one in the cluster
+`kustomization.yaml`:
 
 ```yaml
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: GitRepository
-metadata:
-  name: erebor
-  namespace: flux-system
-spec:
-  interval: 10m
-  ref:
-    branch: main
-  url: https://github.com/OWNER/erebor.git
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: erebor
-  namespace: flux-system
-spec:
-  dependsOn:
-    - name: cert-manager
-    - name: traefik
-  interval: 10m
-  path: ./clusters/production
-  prune: true
-  sourceRef:
-    kind: GitRepository
-    name: erebor
-  wait: true
+resources:
+  - core.yaml
+  - azanulbizar/erebor.yaml
 ```
 
-That is the extension boundary: adding a lab changes only a cluster definition,
-never `infrastructure/`.
+Use `azanulbizar` to enable the whole catalog. Every entry points at a
+stable `cluster/` directory owned by the lab. That directory chooses the lab's
+overlay, so changing from Bilbo to Thorin or Wormtongue to Treebeard never
+changes Khazad-dûm.
 
 ## Configuration policy
 

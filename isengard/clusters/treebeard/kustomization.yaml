@@ -9,5 +9,4 @@ patches:
     patch: |-
       - op: replace
         path: /spec/path
-        value: ./stacks/overlays/treebeard
-
+        value: ./isengard/stacks/overlays/treebeard

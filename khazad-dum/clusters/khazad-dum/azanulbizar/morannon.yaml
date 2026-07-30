@@ -6,8 +6,8 @@ metadata:
 spec:
   interval: 10m
   ref:
-    branch: main
-  url: https://github.com/OWNER/morannon.git
+    branch: feat/add-experiments
+  url: https://github.com/joerivrij/middleearth.git
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -18,7 +18,7 @@ spec:
   dependsOn:
     - name: cilium
   interval: 10m
-  path: ./clusters/default
+  path: ./morannon/cluster
   prune: true
   sourceRef:
     kind: GitRepository
