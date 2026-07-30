@@ -6,6 +6,7 @@ KUBECONFIG ?= $(HOME)/.kube/config
 CLUSTER_PATH := ./$(REPO_ROOT)/clusters/$(CLUSTER)
 CILIUM_VERSION ?= 1.19.6
 CILIUM_NAMESPACE ?= cilium-system
+CILIUM_CLUSTER_NAME ?= khazad-dum
 SINGLE_NODE_KUBECONFIG ?= ../imladris/machine-build/khazad-dum.kubeconfig
 
 .PHONY: bootstrap check-tools install seed-cilium status validate
@@ -50,6 +51,7 @@ seed-cilium:
 	KUBECONFIG="$(KUBECONFIG)" cilium "$$action" \
 		--version "$(CILIUM_VERSION)" \
 		--namespace "$(CILIUM_NAMESPACE)" \
+		--set cluster.name="$(CILIUM_CLUSTER_NAME)" \
 		--set ipam.mode=kubernetes \
 		--set kubeProxyReplacement=false \
 		--wait \

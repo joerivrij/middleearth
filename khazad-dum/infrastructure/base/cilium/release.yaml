@@ -21,6 +21,8 @@ spec:
     remediation:
       retries: 3
   values:
+    cluster:
+      name: khazad-dum
     ipam:
       mode: kubernetes
     kubeProxyReplacement: false
