@@ -5,7 +5,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 10m
-  path: ./apps/erebor/overlays/bilbo/cilium
+  path: ./khazad-dum/apps/erebor/overlays/bilbo/cilium
   prune: true
   sourceRef:
     kind: GitRepository
@@ -22,7 +22,7 @@ spec:
   dependsOn:
     - name: platform-networking
   interval: 10m
-  path: ./infrastructure/base/cert-manager
+  path: ./khazad-dum/infrastructure/base/cert-manager
   prune: true
   sourceRef:
     kind: GitRepository
@@ -39,7 +39,7 @@ spec:
   dependsOn:
     - name: platform-networking
   interval: 10m
-  path: ./apps/erebor/overlays/bilbo/traefik
+  path: ./khazad-dum/apps/erebor/overlays/bilbo/traefik
   prune: true
   sourceRef:
     kind: GitRepository
@@ -56,7 +56,7 @@ spec:
   dependsOn:
     - name: platform-networking
   interval: 10m
-  path: ./infrastructure/base/metrics-server
+  path: ./khazad-dum/infrastructure/base/metrics-server
   prune: true
   sourceRef:
     kind: GitRepository
@@ -73,7 +73,7 @@ spec:
   dependsOn:
     - name: platform-networking
   interval: 10m
-  path: ./apps/erebor/base/rook-ceph-operator
+  path: ./khazad-dum/apps/erebor/base/rook-ceph-operator
   prune: true
   sourceRef:
     kind: GitRepository
@@ -91,11 +91,10 @@ spec:
     - name: erebor-rook-ceph-operator
     - name: platform-ingress
   interval: 10m
-  path: ./apps/erebor/overlays/bilbo/rook-ceph
+  path: ./khazad-dum/apps/erebor/overlays/bilbo/rook-ceph
   prune: true
   sourceRef:
     kind: GitRepository
     name: khazad-dum
   timeout: 30m
   wait: true
-

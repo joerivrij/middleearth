@@ -9,19 +9,18 @@ patches:
     patch: |-
       - op: replace
         path: /spec/path
-        value: ./apps/erebor/overlays/smaug/cilium
+        value: ./khazad-dum/apps/erebor/overlays/smaug/cilium
   - target:
       kind: Kustomization
       name: platform-ingress
     patch: |-
       - op: replace
         path: /spec/path
-        value: ./apps/erebor/overlays/smaug/traefik
+        value: ./khazad-dum/apps/erebor/overlays/smaug/traefik
   - target:
       kind: Kustomization
       name: erebor-rook-ceph
     patch: |-
       - op: replace
         path: /spec/path
-        value: ./apps/erebor/overlays/smaug/rook-ceph
-
+        value: ./khazad-dum/apps/erebor/overlays/smaug/rook-ceph

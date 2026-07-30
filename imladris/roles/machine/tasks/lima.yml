@@ -95,6 +95,7 @@
     ansible_connection: ssh
     ansible_ssh_common_args: "-F {{ lima_ssh_config.stdout | trim }}"
     ansible_python_interpreter: /usr/bin/python3
+    machine_name: "{{ machine_name }}"
     imladris_users: "{{ imladris_users | default([]) }}"
   when: machine_state == "present"
 

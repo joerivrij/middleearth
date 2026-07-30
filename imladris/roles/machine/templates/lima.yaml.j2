@@ -15,6 +15,13 @@ disk: "{{ machine_disk_gib }}GiB"
 networks:
   - {{ machine_lima_network }}: true
 
+{% if machine_lima_kubernetes_api_host_port | int > 0 %}
+portForwards:
+  - guestPort: 6443
+    hostPort: {{ machine_lima_kubernetes_api_host_port }}
+    proto: tcp
+{% endif %}
+
 {% if machine_lima_mount_home %}
 mounts:
   - location: "~"
@@ -26,3 +33,16 @@ mounts: []
 containerd:
   system: false
   user: false
+
+# Lima's normal guest user is used for SSH. System provisioning runs as root
+# and ensures Ansible can manage packages and services without a password
+# prompt.
+provision:
+  - mode: system
+    script: |
+      #!/bin/sh
+      set -eu
+      install -d -m 0750 /etc/sudoers.d
+      printf '%%sudo ALL=(ALL:ALL) NOPASSWD: ALL\n' \
+        > /etc/sudoers.d/90-imladris-lima
+      chmod 0440 /etc/sudoers.d/90-imladris-lima

@@ -94,6 +94,17 @@ by default. Override `machine_container_ssh_private_key` when using another
 keypair. Machine deletion is never part of normal preparation and only occurs
 through `machines-reset`.
 
+For the complete disposable single-node k0s cluster used to test Khazad-dûm:
+
+```sh
+make single-node
+```
+
+This creates a Lima instance named `imladris` and a Kubernetes node and
+cluster named `khazad-dum`, then writes its kubeconfig to
+`machine-build/khazad-dum.kubeconfig`. Continue with `make install` in
+Khazad-dûm.
+
 ## Erebor profile
 
 Erebor is now a consumer of Imladris rather than maintaining a separate

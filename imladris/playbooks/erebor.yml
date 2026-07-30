@@ -2,6 +2,7 @@
 - name: Build and create the Erebor machine
   hosts: machine_hosts
   gather_facts: true
+  become: false
   vars:
     staged_public_key: "{{ erebor_dir }}/machine/ssh/id_apple_machine.pub"
   pre_tasks:
@@ -122,4 +123,3 @@
           Erebor is ready. Bootstrap its platform with:
           make -C {{ middleearth_dir }}/khazad-dum bootstrap-erebor
           ENV=bilbo KUBECONFIG={{ kubeconfig_path }}
-

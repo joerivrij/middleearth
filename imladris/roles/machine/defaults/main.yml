@@ -18,6 +18,7 @@ machine_lima_image_arm64: >-
 machine_lima_image_x86_64: >-
   https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-amd64.qcow2
 machine_lima_mount_home: false
+machine_lima_kubernetes_api_host_port: 0
 
 # Apple Container Machine defaults.
 machine_container_image: "local/{{ machine_name }}:latest"

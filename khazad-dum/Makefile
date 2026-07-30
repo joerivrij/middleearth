@@ -1,12 +1,14 @@
-REPO_URL ?= https://github.com/OWNER/khazad-dum.git
-BRANCH ?= main
+REPO_URL ?= https://github.com/joerivrij/middleearth.git
+BRANCH ?= feat/add-experiments
+REPO_ROOT ?= khazad-dum
 CLUSTER ?= example
 ENV ?= bilbo
 KUBECONFIG ?= $(HOME)/.kube/config
-CLUSTER_PATH := ./clusters/$(CLUSTER)
+CLUSTER_PATH := ./$(REPO_ROOT)/clusters/$(CLUSTER)
 CILIUM_VERSION ?= 1.19.6
+SINGLE_NODE_KUBECONFIG ?= ../imladris/machine-build/khazad-dum.kubeconfig
 
-.PHONY: bootstrap bootstrap-erebor check-tools seed-cilium status validate
+.PHONY: bootstrap bootstrap-erebor check-tools install seed-cilium status validate
 
 check-tools:
 	@command -v flux >/dev/null 2>&1 || { echo "flux CLI not found" >&2; exit 1; }
@@ -14,7 +16,6 @@ check-tools:
 	@test -f "clusters/$(CLUSTER)/kustomization.yaml" || { echo "unknown cluster: $(CLUSTER)" >&2; exit 1; }
 
 bootstrap: check-tools
-	@test "$(REPO_URL)" != "https://github.com/OWNER/khazad-dum.git" || { echo "set REPO_URL to the real Git URL" >&2; exit 1; }
 	@KUBECONFIG="$(KUBECONFIG)" flux check --pre
 	@KUBECONFIG="$(KUBECONFIG)" flux install
 	@KUBECONFIG="$(KUBECONFIG)" flux create source git khazad-dum \
@@ -46,6 +47,16 @@ seed-cilium:
 
 bootstrap-erebor: seed-cilium
 	@$(MAKE) bootstrap CLUSTER="erebor/$(ENV)"
+
+install:
+	@test -f "$(SINGLE_NODE_KUBECONFIG)" || { \
+		echo "single-node kubeconfig not found; run 'make -C ../imladris single-node' first" >&2; \
+		exit 1; \
+	}
+	@$(MAKE) seed-cilium KUBECONFIG="$(SINGLE_NODE_KUBECONFIG)"
+	@$(MAKE) bootstrap \
+		CLUSTER=example \
+		KUBECONFIG="$(SINGLE_NODE_KUBECONFIG)"
 
 status: check-tools
 	@KUBECONFIG="$(KUBECONFIG)" flux get all --all-namespaces

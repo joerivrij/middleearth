@@ -46,12 +46,26 @@ is to be its primary CNI. Install `flux` and `kubectl`, then:
 ```sh
 cp -R clusters/example clusters/my-cluster
 make bootstrap CLUSTER=my-cluster \
-  REPO_URL=https://github.com/OWNER/khazad-dum.git
+  REPO_URL=https://github.com/joerivrij/middleearth.git \
+  BRANCH=feat/add-experiments
 ```
 
 `make bootstrap` installs the Flux controllers, creates the `khazad-dum`
-source, and points the cluster at `clusters/<name>`. The default branch is
-`main`; override `BRANCH` or `KUBECONFIG` when needed.
+source, and points the cluster at `khazad-dum/clusters/<name>`. The current
+default branch is `feat/add-experiments`; override `BRANCH` or `KUBECONFIG`
+when needed.
+
+For a disposable local test, follow the
+[single-node k0s on Lima guide](docs/lima-single-node.md).
+
+After Imladris has prepared the node, the short path is:
+
+```sh
+make install
+```
+
+This uses Imladris's generated kubeconfig, seeds Cilium so the Flux
+controllers can start, and reconciles `clusters/example`.
 
 Erebor uses k0s with a custom CNI, so Cilium must exist before Flux controllers
 can become ready. Its convenience target seeds the same Cilium minor version
@@ -60,12 +74,13 @@ managed by the base, then bootstraps the selected Erebor definition:
 ```sh
 make bootstrap-erebor ENV=bilbo \
   KUBECONFIG=../erebor/machine/kubeconfig \
-  REPO_URL=https://github.com/OWNER/khazad-dum.git
+  REPO_URL=https://github.com/joerivrij/middleearth.git \
+  BRANCH=feat/add-experiments
 ```
 
 For a production repository, `flux bootstrap github` is also a good option
 because it configures deploy credentials. Its sync path should be
-`clusters/<name>`.
+`khazad-dum/clusters/<name>`.
 
 ## Add a lab
 

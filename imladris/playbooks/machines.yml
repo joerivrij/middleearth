@@ -2,6 +2,7 @@
 - name: Create local Linux machines
   hosts: machine_hosts
   gather_facts: true
+  become: false
   roles:
     - role: machine
       tags: [machine]
@@ -19,4 +20,3 @@
       tags: [ssh]
     - role: tooling
       tags: [tooling]
-
