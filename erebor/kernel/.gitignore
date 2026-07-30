@@ -1,0 +1,4 @@
+base.config
+Image
+# Obsolete ELF artifact from early custom-kernel builds.
+vmlinux

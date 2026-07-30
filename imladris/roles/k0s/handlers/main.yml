@@ -1,0 +1,9 @@
+---
+- name: Restart k0s
+  ansible.builtin.service:
+    name: "{{ 'k0scontroller' if k0s_node_role == 'controller' else 'k0sworker' }}"
+    state: restarted
+  when: ansible_facts.services is not defined or
+    (('k0scontroller.service' in ansible_facts.services) or
+    ('k0sworker.service' in ansible_facts.services))
+

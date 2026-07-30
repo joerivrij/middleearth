@@ -1,0 +1,39 @@
+---
+- name: Reset the Amon Sul BGP lab
+  hosts: bgp_nodes
+  become: true
+  vars:
+    amonsul_reset_remove_packages: false
+  tasks:
+    - name: Stop and disable the dummy prefix service
+      ansible.builtin.systemd_service:
+        name: amonsul-dummy.service
+        enabled: false
+        state: stopped
+      failed_when: false
+
+    - name: Remove managed files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/systemd/system/amonsul-dummy.service
+        - /etc/frr/frr.conf
+
+    - name: Stop and disable FRR
+      ansible.builtin.service:
+        name: frr
+        enabled: false
+        state: stopped
+      failed_when: false
+
+    - name: Reload systemd
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+
+    - name: Optionally remove FRR
+      ansible.builtin.package:
+        name: frr
+        state: absent
+      when: amonsul_reset_remove_packages
+

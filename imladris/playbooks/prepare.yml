@@ -1,0 +1,21 @@
+---
+- name: Prepare Linux hosts
+  hosts: linux
+  become: true
+  roles:
+    - role: common
+      tags: [common]
+    - role: users
+      tags: [users]
+    - role: ssh
+      tags: [ssh]
+    - role: tooling
+      tags: [tooling]
+
+- name: Prepare Raspberry Pi hosts
+  hosts: raspberry_pi
+  become: true
+  roles:
+    - role: raspberry_pi
+      tags: [raspberry_pi]
+

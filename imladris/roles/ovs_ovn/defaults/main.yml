@@ -1,0 +1,18 @@
+---
+ovs_ovn_install: false
+ovs_ovn_enable_services: true
+ovs_ovn_packages_debian:
+  - openvswitch-switch
+  - ovn-common
+  - ovn-host
+ovs_ovn_packages_redhat:
+  - openvswitch
+  - ovn
+  - ovn-host
+ovs_ovn_services_debian:
+  - openvswitch-switch
+  - ovn-host
+ovs_ovn_services_redhat:
+  - openvswitch
+  - ovn-controller
+

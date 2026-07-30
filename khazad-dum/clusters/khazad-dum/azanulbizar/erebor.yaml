@@ -1,0 +1,28 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: erebor
+  namespace: flux-system
+spec:
+  interval: 10m
+  ref:
+    branch: main
+  url: https://github.com/joerivrij/middleearth.git
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: erebor
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: cilium
+    - name: traefik
+  interval: 10m
+  path: ./erebor/cluster
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: erebor
+  timeout: 30m
+  wait: true

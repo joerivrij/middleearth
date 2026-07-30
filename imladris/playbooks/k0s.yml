@@ -1,0 +1,26 @@
+---
+- name: Install optional standalone containerd
+  hosts: k0s_controllers:k0s_workers
+  become: true
+  roles:
+    - role: containerd
+      tags: [containerd]
+
+- name: Install k0s controllers
+  hosts: k0s_controllers
+  become: true
+  vars:
+    k0s_node_role: controller
+  roles:
+    - role: k0s
+      tags: [k0s]
+
+- name: Install k0s workers
+  hosts: k0s_workers
+  become: true
+  vars:
+    k0s_node_role: worker
+  roles:
+    - role: k0s
+      tags: [k0s]
+

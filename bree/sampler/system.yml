@@ -1,0 +1,97 @@
+sparklines:
+  - title: CPU usage
+    position: [[0, 0], [40, 8]]
+    rate-ms: 200
+    scale: 0
+    sample: ~/go/src/github.com/joerivrij/middleearth/bree/sampler/scripts/cpu.sh
+
+  - title: Free memory pages
+    position: [[40, 0], [40, 8]]
+    rate-ms: 200
+    scale: 0
+    sample: ~/go/src/github.com/joerivrij/middleearth/bree/sampler/scripts/memory.sh
+
+  - title: Load average (1 minute)
+    position: [[0, 18], [20, 5]]
+    rate-ms: 3000
+    scale: 2
+    sample: >-
+      uptime | awk -F'load averages?: '
+      '{ split($2, load, /,| /); print load[1] + 0 }'
+
+barcharts:
+  - title: Local network activity
+    position: [[0, 9], [80, 8]]
+    rate-ms: 500
+    scale: 0
+    items:
+      - label: UDP bytes in
+        sample: ~/go/src/github.com/joerivrij/middleearth/bree/sampler/scripts/network.sh udp-rx
+      - label: UDP bytes out
+        sample: ~/go/src/github.com/joerivrij/middleearth/bree/sampler/scripts/network.sh udp-tx
+      - label: TCP bytes in
+        sample: ~/go/src/github.com/joerivrij/middleearth/bree/sampler/scripts/network.sh tcp-rx
+      - label: TCP bytes out
+        sample: ~/go/src/github.com/joerivrij/middleearth/bree/sampler/scripts/network.sh tcp-tx
+
+gauges:
+  - title: Root disk used (%)
+    position: [[20, 18], [20, 5]]
+    rate-ms: 10000
+    cur:
+      sample: df -P / | awk 'NR == 2 { gsub(/%/, "", $5); print $5 }'
+    max:
+      sample: echo 100
+    min:
+      sample: echo 0
+
+  - title: Battery (%)
+    position: [[40, 18], [20, 5]]
+    rate-ms: 10000
+    cur:
+      sample: ~/go/src/github.com/joerivrij/middleearth/bree/sampler/scripts/battery.sh percent
+    max:
+      sample: echo 100
+    min:
+      sample: echo 0
+
+textboxes:
+  - title: Battery state
+    position: [[60, 18], [20, 5]]
+    rate-ms: 10000
+    sample: ~/go/src/github.com/joerivrij/middleearth/bree/sampler/scripts/battery.sh status
+
+  - title: System information
+    position: [[0, 24], [40, 7]]
+    rate-ms: 60000
+    sample: >-
+      printf 'Hostname: %s\nOS:       %s\nKernel:   %s %s\n'
+      "$(hostname 2>/dev/null || echo unavailable)"
+      "$(uname -s 2>/dev/null || echo unavailable)"
+      "$(uname -r 2>/dev/null || echo unavailable)"
+      "$(uname -m 2>/dev/null || echo unavailable)"
+
+  - title: System uptime
+    position: [[40, 24], [40, 7]]
+    rate-ms: 10000
+    sample: uptime 2>/dev/null || echo 'Uptime unavailable'
+
+  - title: Top processes by CPU
+    position: [[0, 32], [40, 12]]
+    rate-ms: 3000
+    sample: >-
+      if [ "$(uname -s)" = Darwin ]; then
+        ps -Arcwwxo pid,comm,%cpu 2>/dev/null | head -n 8;
+      else
+        ps -eo pid,comm,%cpu --sort=-%cpu 2>/dev/null | head -n 8 || echo 'Process list unavailable';
+      fi
+
+  - title: Top processes by memory
+    position: [[40, 32], [40, 12]]
+    rate-ms: 3000
+    sample: >-
+      if [ "$(uname -s)" = Darwin ]; then
+        ps -Amcwwxo pid,comm,%mem 2>/dev/null | head -n 8;
+      else
+        ps -eo pid,comm,%mem --sort=-%mem 2>/dev/null | head -n 8 || echo 'Process list unavailable';
+      fi

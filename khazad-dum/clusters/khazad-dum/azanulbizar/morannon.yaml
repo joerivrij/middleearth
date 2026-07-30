@@ -1,0 +1,27 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: morannon
+  namespace: flux-system
+spec:
+  interval: 10m
+  ref:
+    branch: main
+  url: https://github.com/joerivrij/middleearth.git
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: morannon
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: cilium
+  interval: 10m
+  path: ./morannon/cluster
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: morannon
+  timeout: 15m
+  wait: true

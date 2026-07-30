@@ -1,0 +1,48 @@
+# Overrides applied on top of the upstream rook-ceph chart defaults.
+# Only the keys we deliberately change live here; everything else comes from
+# the chart at the version pinned in kustomization.yaml.
+
+crds:
+  # Let Helm manage the rook CRDs. WARNING: never flip this to false on an
+  # existing cluster — disabling can delete the CRDs and destroy the cluster.
+  # See https://rook.io/docs/rook/latest/Troubleshooting/disaster-recovery/.
+  enabled: true
+
+# Apple container machines cannot attach a second block disk yet. Bilbo uses
+# the VM's dedicated /dev/loop0 test device created at boot.
+allowLoopDevices: true
+
+csi:
+  # Use the standalone ceph-csi-operator instead of the in-tree CSI manager.
+  rookUseCsiOperator: true
+
+  # We only consume RBD (block) storage; CephFS and NFS drivers stay off so
+  # the operator doesn't schedule plugins we don't use.
+  enableRbdDriver: true
+  enableCephfsDriver: false
+  nfs:
+    enabled: false
+
+  # Snapshotter sidecars are off — we don't take CSI snapshots in dev.
+  enableCephfsSnapshotter: false
+  enableNFSSnapshotter: false
+  enableRBDSnapshotter: false
+
+  # Run CSI pods on the cluster pod network, not the host network.
+  enableCSIHostNetwork: false
+
+  # Single-node dev cluster — one provisioner is enough.
+  provisionerReplicas: 1
+
+  # k0s stores kubelet state under /var/lib/k0s/kubelet, not the upstream
+  # default of /var/lib/kubelet. The CSI plugin needs this to find the
+  # kubelet socket and bind-mount volumes correctly.
+  kubeletDirPath: /var/lib/k0s/kubelet
+
+# Operator pod sizing tuned for Bilbo (minimal footprint, hard memory cap).
+resources:
+  requests:
+    cpu: 50m
+    memory: 256Mi
+  limits:
+    memory: 256Mi

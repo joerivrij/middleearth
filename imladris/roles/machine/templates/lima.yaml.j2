@@ -1,0 +1,65 @@
+# Managed by Ansible (Imladris).
+vmType: "{{ machine_lima_vm_type }}"
+os: Linux
+
+images:
+  - location: "{{ machine_lima_image_arm64
+      if ansible_facts.architecture == 'arm64'
+      else machine_lima_image_x86_64 }}"
+    arch: "{{ machine_architecture_map[ansible_facts.architecture] }}"
+
+cpus: {{ machine_cpus }}
+memory: "{{ machine_memory_gib }}GiB"
+disk: "{{ machine_disk_gib }}GiB"
+
+networks:
+  - {{ machine_lima_network }}: true
+
+{% if machine_lima_kubernetes_api_host_port | int > 0
+   or machine_lima_http_host_port | int > 0
+   or machine_lima_https_host_port | int > 0 %}
+portForwards:
+{% if machine_lima_kubernetes_api_host_port | int > 0 %}
+  - guestPort: 6443
+    hostPort: {{ machine_lima_kubernetes_api_host_port }}
+    proto: tcp
+    static: true
+{% endif %}
+{% if machine_lima_http_host_port | int > 0 %}
+  - guestPort: {{ machine_lima_http_guest_port }}
+    hostPort: {{ machine_lima_http_host_port }}
+    proto: tcp
+    static: true
+{% endif %}
+{% if machine_lima_https_host_port | int > 0 %}
+  - guestPort: {{ machine_lima_https_guest_port }}
+    hostPort: {{ machine_lima_https_host_port }}
+    proto: tcp
+    static: true
+{% endif %}
+{% endif %}
+
+{% if machine_lima_mount_home %}
+mounts:
+  - location: "~"
+    writable: false
+{% else %}
+mounts: []
+{% endif %}
+
+containerd:
+  system: false
+  user: false
+
+# Lima's normal guest user is used for SSH. System provisioning runs as root
+# and ensures Ansible can manage packages and services without a password
+# prompt.
+provision:
+  - mode: system
+    script: |
+      #!/bin/sh
+      set -eu
+      install -d -m 0750 /etc/sudoers.d
+      printf '%%sudo ALL=(ALL:ALL) NOPASSWD: ALL\n' \
+        > /etc/sudoers.d/90-imladris-lima
+      chmod 0440 /etc/sudoers.d/90-imladris-lima

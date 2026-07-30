@@ -1,0 +1,19 @@
+! Managed by Ansible (Amon Sul).
+frr defaults traditional
+hostname {{ inventory_hostname }}
+log syslog informational
+service integrated-vtysh-config
+!
+router bgp {{ bgp_asn }}
+ bgp router-id {{ bgp_router_id }}
+ bgp network import-check
+ no bgp ebgp-requires-policy
+ neighbor {{ bgp_neighbor_ip }} remote-as {{ bgp_neighbor_asn }}
+ neighbor {{ bgp_neighbor_ip }} description Amon-Sul-peer
+ !
+ address-family ipv4 unicast
+  network {{ bgp_advertised_prefix }}
+  neighbor {{ bgp_neighbor_ip }} activate
+ exit-address-family
+exit
+!

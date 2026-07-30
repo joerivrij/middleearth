@@ -1,0 +1,125 @@
+---
+- name: Build and create the Erebor machine
+  hosts: machine_hosts
+  gather_facts: true
+  become: false
+  vars:
+    staged_public_key: "{{ erebor_dir }}/machine/ssh/id_apple_machine.pub"
+  pre_tasks:
+    - name: Check Erebor host-side commands
+      ansible.builtin.command:
+        argv: [sh, -c, "command -v {{ item }}"]
+      loop:
+        - container
+        - kubectl
+      changed_when: false
+
+    - name: Check for the Erebor kernel
+      ansible.builtin.stat:
+        path: "{{ machine_container_kernel }}"
+      register: erebor_kernel
+
+    - name: Check for matching Erebor kernel modules
+      ansible.builtin.stat:
+        path: "{{ erebor_dir }}/machine/modules"
+      register: erebor_kernel_modules
+
+    - name: Build the Cilium-capable Erebor kernel
+      ansible.builtin.command:
+        argv: ["{{ erebor_dir }}/kernel/build.sh"]
+      when: >-
+        not erebor_kernel.stat.exists or
+        not erebor_kernel_modules.stat.exists or
+        kernel_rebuild | bool
+      register: erebor_kernel_build
+      changed_when: true
+
+    - name: Create the ignored Erebor SSH build directory
+      ansible.builtin.file:
+        path: "{{ staged_public_key | dirname }}"
+        state: directory
+        mode: "0700"
+
+    - name: Stage only the Apple machine public key
+      ansible.builtin.copy:
+        src: "{{ machine_container_ssh_public_key }}"
+        dest: "{{ staged_public_key }}"
+        mode: "0644"
+      register: erebor_staged_key
+
+    - name: Rebuild the machine image when its inputs changed
+      ansible.builtin.set_fact:
+        machine_container_rebuild_image: >-
+          {{ erebor_kernel_build is changed or erebor_staged_key is changed }}
+
+  roles:
+    - role: machine
+      tags: [machine]
+
+- name: Provision Erebor with reusable Imladris roles
+  hosts: provisioned_machines
+  gather_facts: true
+  become: true
+  roles:
+    - role: common
+      tags: [common]
+    - role: tooling
+      tags: [tooling]
+    - role: k0s
+      tags: [k0s]
+  post_tasks:
+    - name: Wait for the Kubernetes API inside Erebor
+      ansible.builtin.command:
+        argv: [k0s, kubectl, get, --raw=/readyz]
+      register: erebor_api_ready
+      changed_when: false
+      retries: 60
+      delay: 2
+      until: erebor_api_ready.rc == 0
+
+    - name: Generate the administrator kubeconfig
+      ansible.builtin.command:
+        argv: [k0s, kubeconfig, admin]
+      register: erebor_admin_kubeconfig
+      changed_when: false
+      no_log: true
+
+    - name: Normalize the Erebor kubeconfig
+      ansible.builtin.set_fact:
+        erebor_normalized_kubeconfig:
+          apiVersion: v1
+          kind: Config
+          clusters:
+            - name: erebor
+              cluster: >-
+                {{ (erebor_admin_kubeconfig.stdout | from_yaml).clusters[0].cluster
+                   | combine({'server': 'https://' ~ ansible_host ~ ':6443'}) }}
+          users:
+            - name: erebor-admin
+              user: "{{ (erebor_admin_kubeconfig.stdout | from_yaml).users[0].user }}"
+          contexts:
+            - name: erebor
+              context:
+                cluster: erebor
+                namespace: kube-system
+                user: erebor-admin
+          current-context: erebor
+      no_log: true
+
+    - name: Store the Erebor kubeconfig on macOS
+      ansible.builtin.copy:
+        content: >-
+          {{ erebor_normalized_kubeconfig
+             | to_nice_yaml(indent=2, sort_keys=false) }}
+        dest: "{{ kubeconfig_path }}"
+        mode: "0600"
+      delegate_to: localhost
+      become: false
+      no_log: true
+
+    - name: Print the Khazad-dum bootstrap step
+      ansible.builtin.debug:
+        msg: >-
+          Erebor is ready. Bootstrap its platform with:
+          make -C {{ middleearth_dir }}/khazad-dum bootstrap-erebor
+          ENV=bilbo KUBECONFIG={{ kubeconfig_path }}

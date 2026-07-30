@@ -1,0 +1,37 @@
+---
+machine_backend: lima
+machine_backend_filter: all
+machine_state: present
+machine_name: imladris
+machine_cpus: 4
+machine_memory_gib: 4
+machine_disk_gib: 30
+machine_architecture_map:
+  arm64: aarch64
+  x86_64: x86_64
+
+# Lima defaults.
+machine_lima_vm_type: vz
+machine_lima_network: vzNAT
+machine_lima_image_arm64: >-
+  https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-arm64.qcow2
+machine_lima_image_x86_64: >-
+  https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-amd64.qcow2
+machine_lima_mount_home: false
+machine_lima_kubernetes_api_host_port: 0
+machine_lima_http_host_port: 0
+machine_lima_https_host_port: 0
+machine_lima_http_guest_port: 30080
+machine_lima_https_guest_port: 30443
+
+# Apple Container Machine defaults.
+machine_container_image: "local/{{ machine_name }}:latest"
+machine_container_build_root: "{{ playbook_dir | dirname }}/machine-build"
+machine_container_ssh_private_key: >-
+  {{ lookup('env', 'HOME') }}/.ssh/id_apple_machine
+machine_container_ssh_public_key: "{{ machine_container_ssh_private_key }}.pub"
+machine_container_rebuild_image: false
+machine_container_recreate: false
+machine_container_custom_build_context: ""
+machine_container_custom_containerfile: ""
+machine_container_kernel: ""

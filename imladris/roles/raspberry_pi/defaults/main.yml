@@ -1,0 +1,8 @@
+---
+raspberry_pi_prepare: false
+raspberry_pi_disable_swap: true
+raspberry_pi_enable_cgroup_memory: true
+raspberry_pi_boot_cmdline_candidates:
+  - /boot/firmware/cmdline.txt
+  - /boot/cmdline.txt
+

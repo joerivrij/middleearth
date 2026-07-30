@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+
+disk=/var/lib/erebor/ceph-osd.img
+device=/dev/loop0
+
+install -d -m 0755 /var/lib/erebor
+if [ ! -e "$disk" ]; then
+  truncate -s "${EREBOR_CEPH_DISK_SIZE:-10G}" "$disk"
+fi
+
+if ! losetup "$device" >/dev/null 2>&1; then
+  losetup "$device" "$disk"
+fi

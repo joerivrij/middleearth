@@ -1,0 +1,35 @@
+---
+- name: Verify the withdrawn route disappears at the peer
+  hosts: withdraw_observers
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Query the withdrawn BGP prefix
+      ansible.builtin.command:
+        argv:
+          - vtysh
+          - -c
+          - "show bgp ipv4 unicast {{ bgp_remote_prefix }} json"
+      register: withdrawn_bgp_route
+      changed_when: false
+      retries: 15
+      delay: 1
+      until: bgp_remote_prefix not in withdrawn_bgp_route.stdout
+
+    - name: Query the withdrawn Linux route
+      ansible.builtin.command:
+        argv:
+          - ip
+          - route
+          - show
+          - "{{ bgp_remote_prefix }}"
+      register: withdrawn_kernel_route
+      changed_when: false
+
+    - name: Confirm control-plane and kernel withdrawal
+      ansible.builtin.assert:
+        that:
+          - bgp_remote_prefix not in withdrawn_bgp_route.stdout
+          - withdrawn_kernel_route.stdout | length == 0
+        success_msg: "{{ bgp_remote_prefix }} was withdrawn from BGP and Linux."
+

@@ -1,0 +1,18 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: gondolin-secrets
+  namespace: flux-system
+spec:
+  decryption:
+    provider: sops
+    secretRef:
+      name: gondolin-sops-gpg
+  interval: 10m
+  path: ./gondolin/secrets/example
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: gondolin
+  timeout: 5m
+  wait: true

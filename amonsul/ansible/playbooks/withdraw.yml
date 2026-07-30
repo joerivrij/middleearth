@@ -1,0 +1,23 @@
+---
+- name: Withdraw one advertised prefix
+  hosts: withdraw_target
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Stop the dummy prefix service
+      ansible.builtin.systemd_service:
+        name: amonsul-dummy.service
+        state: stopped
+
+    - name: Wait for FRR to remove the local prefix
+      ansible.builtin.command:
+        argv:
+          - vtysh
+          - -c
+          - "show bgp ipv4 unicast {{ bgp_advertised_prefix }} json"
+      register: withdrawn_local_route
+      changed_when: false
+      retries: 10
+      delay: 1
+      until: bgp_advertised_prefix not in withdrawn_local_route.stdout
+

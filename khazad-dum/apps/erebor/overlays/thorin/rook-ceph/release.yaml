@@ -1,0 +1,33 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: rook-ceph-cluster
+  namespace: rook-ceph
+spec:
+  values:
+    toolbox:
+      enabled: true
+    cephClusterSpec:
+      mon:
+        count: 3
+        allowMultiplePerNode: false
+      mgr:
+        count: 2
+        allowMultiplePerNode: false
+      cephConfig:
+        global:
+          osd_pool_default_size: "2"
+    cephBlockPools:
+      - name: replicapool
+        spec:
+          failureDomain: host
+          replicated:
+            size: 2
+            requireSafeReplicaSize: true
+        storageClass:
+          enabled: true
+          name: rook-ceph-block
+          isDefault: true
+          reclaimPolicy: Delete
+          allowVolumeExpansion: true
+          volumeBindingMode: WaitForFirstConsumer

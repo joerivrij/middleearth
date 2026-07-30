@@ -1,0 +1,151 @@
+---
+- name: Check for the Apple container CLI
+  ansible.builtin.command:
+    argv: [sh, -c, "command -v container"]
+  changed_when: false
+
+- name: Check the Apple Container Machine SSH keypair
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ machine_container_ssh_private_key }}"
+    - "{{ machine_container_ssh_public_key }}"
+  register: container_machine_keys
+  when: machine_state == "present"
+
+- name: Require the Apple Container Machine SSH keypair
+  ansible.builtin.assert:
+    that:
+      - container_machine_keys.results | map(attribute="stat.exists") | min
+    fail_msg: >-
+      Create the configured Apple machine SSH keypair before provisioning.
+  when: machine_state == "present"
+
+- name: Start the Apple container service
+  ansible.builtin.command:
+    argv: [container, system, start]
+  changed_when: false
+  when: machine_state == "present"
+
+- name: Inspect the Apple Container Machine
+  ansible.builtin.command:
+    argv: [container, machine, inspect, "{{ machine_name }}"]
+  register: container_machine_inspect
+  changed_when: false
+  failed_when: false
+
+- name: Delete the Apple Container Machine
+  ansible.builtin.command:
+    argv: [container, machine, rm, "{{ machine_name }}"]
+  when:
+    - machine_state == "absent"
+    - container_machine_inspect.rc == 0
+  changed_when: true
+
+- name: Recreate the Apple Container Machine when explicitly requested
+  ansible.builtin.command:
+    argv: [container, machine, rm, "{{ machine_name }}"]
+  when:
+    - machine_state == "present"
+    - machine_container_recreate
+    - container_machine_inspect.rc == 0
+  register: container_machine_recreated
+  changed_when: true
+
+- name: Create the Apple Container Machine build directory
+  ansible.builtin.file:
+    path: "{{ machine_container_build_root }}/container/{{ machine_name }}"
+    state: directory
+    mode: "0700"
+  when:
+    - machine_state == "present"
+    - machine_container_custom_build_context | length == 0
+
+- name: Render the Apple Container Machine image
+  ansible.builtin.template:
+    src: Containerfile.j2
+    dest: "{{ machine_container_build_root }}/container/{{ machine_name }}/Containerfile"
+    mode: "0600"
+  register: container_machine_containerfile
+  when:
+    - machine_state == "present"
+    - machine_container_custom_build_context | length == 0
+
+- name: Stage the Apple Container Machine public key
+  ansible.builtin.copy:
+    src: "{{ machine_container_ssh_public_key }}"
+    dest: "{{ machine_container_build_root }}/container/{{ machine_name }}/authorized_keys"
+    mode: "0600"
+  register: container_machine_public_key
+  when:
+    - machine_state == "present"
+    - machine_container_custom_build_context | length == 0
+
+- name: Build the Apple Container Machine image
+  ansible.builtin.command:
+    argv:
+      - container
+      - build
+      - --tag
+      - "{{ machine_container_image }}"
+      - --file
+      - "{{ machine_container_custom_containerfile
+          if machine_container_custom_build_context | length > 0
+          else machine_container_build_root ~ '/container/' ~ machine_name ~ '/Containerfile' }}"
+      - "{{ machine_container_custom_build_context
+          if machine_container_custom_build_context | length > 0
+          else machine_container_build_root ~ '/container/' ~ machine_name }}"
+  when:
+    - machine_state == "present"
+    - >-
+      container_machine_inspect.rc != 0 or
+      container_machine_recreated is changed or
+      machine_container_rebuild_image or
+      (container_machine_custom_build_context | length == 0 and
+       (container_machine_containerfile is changed or
+        container_machine_public_key is changed))
+  changed_when: true
+
+- name: Create the Apple Container Machine
+  ansible.builtin.command:
+    argv: >-
+      {{ [
+        'container', 'machine', 'create', machine_container_image,
+        '--name', machine_name,
+        '--cpus', machine_cpus | string,
+        '--memory', machine_memory_gib | string ~ 'G'
+      ] + (
+        ['--kernel', machine_container_kernel]
+        if machine_container_kernel | length > 0 else []
+      ) }}
+  when:
+    - machine_state == "present"
+    - container_machine_inspect.rc != 0 or container_machine_recreated is changed
+  changed_when: true
+
+- name: Inspect the running Apple Container Machine
+  ansible.builtin.command:
+    argv: [container, machine, inspect, "{{ machine_name }}"]
+  register: running_container_machine
+  changed_when: false
+  when: machine_state == "present"
+
+- name: Register the Apple Container Machine guest
+  ansible.builtin.add_host:
+    name: "container-{{ machine_name }}"
+    groups: provisioned_machines
+    ansible_host: >-
+      {{ (running_container_machine.stdout | from_json | first).ipAddress }}
+    ansible_user: "{{ lookup('env', 'USER') }}"
+    ansible_connection: ssh
+    ansible_ssh_private_key_file: "{{ machine_container_ssh_private_key }}"
+    ansible_python_interpreter: /usr/bin/python3
+    imladris_users: "{{ imladris_users | default([]) }}"
+  when: machine_state == "present"
+
+- name: Wait for SSH on the Apple Container Machine
+  ansible.builtin.wait_for:
+    host: "{{ (running_container_machine.stdout | from_json | first).ipAddress }}"
+    port: 22
+    timeout: 180
+  when: machine_state == "present"

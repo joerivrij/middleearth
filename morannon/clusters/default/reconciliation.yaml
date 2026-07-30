@@ -1,0 +1,31 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: morannon-kyverno
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: ./morannon/infrastructure/kyverno
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: morannon
+  timeout: 10m
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: morannon-policies
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: morannon-kyverno
+  interval: 10m
+  path: ./morannon/policies/baseline
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: morannon
+  timeout: 10m
+  wait: true

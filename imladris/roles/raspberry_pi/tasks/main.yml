@@ -1,0 +1,52 @@
+---
+- name: Prepare Raspberry Pi host
+  when: raspberry_pi_prepare
+  block:
+    - name: Assert an ARM architecture
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.architecture in ["aarch64", "arm64", "armv7l"]
+        fail_msg: "raspberry_pi_prepare was enabled on a non-ARM host."
+
+    - name: Check Raspberry Pi kernel command-line locations
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop: "{{ raspberry_pi_boot_cmdline_candidates }}"
+      register: raspberry_pi_cmdline_files
+
+    - name: Select the Raspberry Pi kernel command line
+      ansible.builtin.set_fact:
+        raspberry_pi_boot_cmdline: "{{ (raspberry_pi_cmdline_files.results
+          | selectattr('stat.exists')
+          | map(attribute='item')
+          | first) | default('') }}"
+
+    - name: Require a known Raspberry Pi boot layout
+      ansible.builtin.assert:
+        that:
+          - raspberry_pi_boot_cmdline | length > 0
+        fail_msg: "No supported Raspberry Pi cmdline.txt was found."
+      when: raspberry_pi_enable_cgroup_memory
+
+    - name: Enable memory cgroups
+      ansible.builtin.replace:
+        path: "{{ raspberry_pi_boot_cmdline }}"
+        regexp: '^(?!.*\bcgroup_enable=memory\b)(.*)$'
+        replace: '\1 cgroup_enable=memory cgroup_memory=1'
+      when: raspberry_pi_enable_cgroup_memory
+      notify: Reboot required
+
+    - name: Disable swap immediately
+      ansible.builtin.command: swapoff --all
+      when:
+        - raspberry_pi_disable_swap
+        - ansible_facts.swaptotal_mb | int > 0
+      changed_when: true
+
+    - name: Disable configured swap entries
+      ansible.builtin.replace:
+        path: /etc/fstab
+        regexp: '^(?!#)(\S+\s+\S+\s+swap\s+.*)$'
+        replace: '# \1'
+      when: raspberry_pi_disable_swap
+

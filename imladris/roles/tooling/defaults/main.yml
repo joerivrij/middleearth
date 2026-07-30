@@ -1,0 +1,8 @@
+---
+tooling_packages:
+  - bash-completion
+  - htop
+  - ripgrep
+  - tmux
+  - vim
+

@@ -1,0 +1,36 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cilium
+spec:
+  chart:
+    spec:
+      chart: cilium
+      interval: 1h
+      sourceRef:
+        kind: HelmRepository
+        name: cilium
+      version: "1.19.x"
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    cluster:
+      name: khazad-dum
+    ipam:
+      mode: kubernetes
+    kubeProxyReplacement: false
+    operator:
+      replicas: 1
+    rollOutCiliumPods: true
+    hubble:
+      relay:
+        enabled: true
+      ui:
+        enabled: true

@@ -1,0 +1,11 @@
+.ansible/
+.cache/
+*.retry
+*.swp
+.DS_Store
+.idea/
+.vscode/
+
+ansible/inventories/*/hosts.yml
+!ansible/inventories/example/hosts.yml
+

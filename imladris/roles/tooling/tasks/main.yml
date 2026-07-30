@@ -1,0 +1,6 @@
+---
+- name: Install common operator tooling
+  ansible.builtin.package:
+    name: "{{ tooling_packages }}"
+    state: present
+

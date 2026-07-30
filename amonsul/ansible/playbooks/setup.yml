@@ -1,0 +1,7 @@
+---
+- name: Configure the Amon Sul BGP nodes
+  hosts: bgp_nodes
+  become: true
+  roles:
+    - role: bgp_node
+

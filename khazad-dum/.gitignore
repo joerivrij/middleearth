@@ -1,0 +1,10 @@
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Keep credentials and cluster access out of Git.
+*.agekey
+kubeconfig
+kubeconfig.*
+

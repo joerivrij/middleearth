@@ -1,0 +1,28 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-workload-labels
+spec:
+  admission: true
+  background: true
+  validationFailureAction: Audit
+  rules:
+    - name: require-recommended-labels
+      match:
+        any:
+          - resources:
+              kinds:
+                - Deployment
+                - StatefulSet
+                - DaemonSet
+      validate:
+        allowExistingViolations: true
+        message: >-
+          Workloads should define app.kubernetes.io/name and
+          app.kubernetes.io/managed-by labels.
+        pattern:
+          metadata:
+            labels:
+              app.kubernetes.io/name: "?*"
+              app.kubernetes.io/managed-by: "?*"
+

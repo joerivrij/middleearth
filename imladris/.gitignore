@@ -1,0 +1,18 @@
+.cache/
+.ansible/
+.venv/
+*.retry
+*.swp
+.DS_Store
+.idea/
+.vscode/
+machine-build/
+
+# Inventories may contain addresses or lab-specific data.
+inventories/*/hosts.yml
+!inventories/example/hosts.yml
+!inventories/erebor/hosts.yml
+
+# Never commit secrets or vault passwords.
+*.vault-password
+*.agekey
