@@ -1,5 +1,5 @@
 REPO_URL ?= https://github.com/joerivrij/middleearth.git
-BRANCH ?= feat/add-experiments
+BRANCH ?= main
 REPO_ROOT ?= khazad-dum
 CLUSTER ?= khazad-dum
 KUBECONFIG ?= $(HOME)/.kube/config

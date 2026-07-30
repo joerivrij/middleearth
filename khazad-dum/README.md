@@ -48,12 +48,12 @@ is to be its primary CNI. Install `flux` and `kubectl`, then:
 ```sh
 make bootstrap CLUSTER=khazad-dum \
   REPO_URL=https://github.com/joerivrij/middleearth.git \
-  BRANCH=feat/add-experiments
+  BRANCH=main
 ```
 
 `make bootstrap` installs the Flux controllers, creates the `khazad-dum`
 source, and points the cluster at `khazad-dum/clusters/<name>`. The current
-default branch is `feat/add-experiments`; override `BRANCH` or `KUBECONFIG`
+default branch is `main`; override `BRANCH` or `KUBECONFIG`
 when needed.
 
 For a disposable local test, follow the
