@@ -64,3 +64,18 @@ validate:
 		echo "Validating $$path"; \
 		kustomize build "$$path" >/dev/null || exit 1; \
 	done
+	@rendered=$$(mktemp); \
+	trap 'rm -f "$$rendered"' EXIT; \
+	kustomize build clusters/khazad-dum >"$$rendered"; \
+	awk '\
+		/^kind: Kustomization$$/ { flux_kustomization=1; namespace=0 } \
+		flux_kustomization && /^  namespace: flux-system$$/ { namespace=1 } \
+		flux_kustomization && /^---$$/ { \
+			if (!namespace) { print "Flux Kustomization missing namespace" > "/dev/stderr"; exit 1 } \
+			flux_kustomization=0 \
+		} \
+		END { \
+			if (flux_kustomization && !namespace) { \
+				print "Flux Kustomization missing namespace" > "/dev/stderr"; exit 1 \
+			} \
+		}' "$$rendered"
