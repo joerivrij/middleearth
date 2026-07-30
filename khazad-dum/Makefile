@@ -5,7 +5,7 @@ CLUSTER ?= khazad-dum
 KUBECONFIG ?= $(HOME)/.kube/config
 CLUSTER_PATH := ./$(REPO_ROOT)/clusters/$(CLUSTER)
 CILIUM_VERSION ?= 1.19.6
-CILIUM_NAMESPACE ?= cilium-system
+CILIUM_NAMESPACE ?= cilium
 CILIUM_CLUSTER_NAME ?= khazad-dum
 SINGLE_NODE_KUBECONFIG ?= ../imladris/machine-build/khazad-dum.kubeconfig
 

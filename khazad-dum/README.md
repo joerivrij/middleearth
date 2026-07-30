@@ -97,7 +97,7 @@ cluster-specific settings belong in a cluster overlay or a separate component.
 In particular:
 
 - Cilium defaults to Kubernetes IPAM and does not replace kube-proxy.
-- Cilium is installed in the dedicated `cilium-system` namespace during both
+- Cilium is installed in the dedicated `cilium` namespace during both
   bootstrap seeding and Flux reconciliation.
 - The local profile exposes Traefik as NodePort `30080`/`30443`; Imladris
   forwards those to macOS `5687`/`8443`.
