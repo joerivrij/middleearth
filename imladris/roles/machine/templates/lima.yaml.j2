@@ -23,16 +23,19 @@ portForwards:
   - guestPort: 6443
     hostPort: {{ machine_lima_kubernetes_api_host_port }}
     proto: tcp
+    static: true
 {% endif %}
 {% if machine_lima_http_host_port | int > 0 %}
   - guestPort: {{ machine_lima_http_guest_port }}
     hostPort: {{ machine_lima_http_host_port }}
     proto: tcp
+    static: true
 {% endif %}
 {% if machine_lima_https_host_port | int > 0 %}
   - guestPort: {{ machine_lima_https_guest_port }}
     hostPort: {{ machine_lima_https_host_port }}
     proto: tcp
+    static: true
 {% endif %}
 {% endif %}
 
