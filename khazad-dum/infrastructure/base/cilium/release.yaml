@@ -27,3 +27,8 @@ spec:
     operator:
       replicas: 1
     rollOutCiliumPods: true
+    hubble:
+      relay:
+        enabled: true
+      ui:
+        enabled: true

@@ -4,6 +4,8 @@ metadata:
   name: cilium
   namespace: flux-system
 spec:
+  dependsOn:
+    - name: traefik-crds
   interval: 10m
   path: ./khazad-dum/infrastructure/base/cilium
   prune: true
@@ -36,8 +38,6 @@ metadata:
   name: traefik-crds
   namespace: flux-system
 spec:
-  dependsOn:
-    - name: cilium
   interval: 10m
   path: ./khazad-dum/infrastructure/base/traefik-crds
   prune: true

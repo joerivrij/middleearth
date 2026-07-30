@@ -99,8 +99,8 @@ In particular:
 - Cilium defaults to Kubernetes IPAM and does not replace kube-proxy.
 - Cilium is installed in the dedicated `cilium-system` namespace during both
   bootstrap seeding and Flux reconciliation.
-- Traefik uses a `LoadBalancer` Service; bare-metal clusters need an address
-  provider such as Cilium L2 announcements or MetalLB.
+- The local profile exposes Traefik as NodePort `30080`/`30443`; Imladris
+  forwards those to macOS `5687`/`8443`.
 - No default `ClusterIssuer` is included because ACME email, challenge type,
   and DNS credentials are environment-specific.
 - metrics-server uses normal kubelet TLS verification. Do not add

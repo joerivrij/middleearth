@@ -31,5 +31,12 @@ spec:
         enabled: true
         publishedService:
           enabled: true
+    api:
+      dashboard: true
     service:
-      type: LoadBalancer
+      type: NodePort
+    ports:
+      web:
+        nodePort: 30080
+      websecure:
+        nodePort: 30443

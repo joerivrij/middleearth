@@ -40,6 +40,10 @@ seed-cilium:
 		echo "legacy Cilium installation found in kube-system; recreate or migrate this disposable cluster first" >&2; \
 		exit 1; \
 	fi
+	@KUBECONFIG="$(KUBECONFIG)" kubectl get namespace \
+		"$(CILIUM_NAMESPACE)" >/dev/null 2>&1 || \
+		KUBECONFIG="$(KUBECONFIG)" kubectl create namespace \
+		"$(CILIUM_NAMESPACE)"
 	@action=install; \
 	if KUBECONFIG="$(KUBECONFIG)" kubectl get daemonset cilium \
 		--namespace "$(CILIUM_NAMESPACE)" >/dev/null 2>&1; then action=upgrade; fi; \

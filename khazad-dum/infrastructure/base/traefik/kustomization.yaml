@@ -3,3 +3,4 @@ kind: Kustomization
 namespace: traefik
 resources:
   - release.yaml
+  - ir.yaml

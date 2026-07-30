@@ -129,9 +129,22 @@ kubectl get helmreleases --all-namespaces
 kubectl top nodes
 ```
 
-The Traefik Service may remain without an external address. Lima has no
-bare-metal load-balancer implementation by default; this does not prevent the
-platform components from becoming ready.
+Add the local dashboard names to `/etc/hosts`:
+
+```text
+127.0.0.1 traefik.khazad-dum.lotr
+127.0.0.1 hubble.khazad-dum.lotr
+```
+
+The Lima profile forwards Traefik's HTTP and HTTPS NodePorts to macOS ports
+5687 and 8443. Open:
+
+- `http://traefik.khazad-dum.lotr:5687/dashboard/`
+- `http://hubble.khazad-dum.lotr:5687/`
+
+Lima only applies new port-forward definitions when creating the VM. Recreate
+an older disposable `imladris` VM once if these ports were not present when it
+was created.
 
 ## Reconcile after a change
 
