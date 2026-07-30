@@ -1,6 +1,7 @@
 # Grey Havens
 
-Grey Havens is a small "life of a packet" laboratory. Give it an HTTP or HTTPS
+Grey Havens is the networking and OVN laboratory for Middle-earth. Its first
+experiment is a small "life of a packet" application. Give it an HTTP or HTTPS
 URL and it shows the observable stages of the request: URL parsing, DNS, TCP,
 TLS, connection selection, HTTP headers, first response byte, and response body.
 Each stage explains what is happening and exposes details such as IP addresses,
@@ -36,6 +37,8 @@ requests time out after 15 seconds.
 
 ## Where this could sail next
 
+- build isolated OVS and OVN topology experiments
+- follow logical OVN flows into OpenFlow and kernel forwarding
 - draw the browser, router, DNS resolver, and server as an animated route
 - explain headers and protocol differences in plain language
 - add ICMP/traceroute hops where the host permits raw sockets

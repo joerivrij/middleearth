@@ -2,116 +2,57 @@
 
 One repository to rule the homelab.
 
-`middleearth` is the container for everything I need to build, rebuild, and
-maintain my homelab systems. It includes machine setup, infrastructure, and
-small experiments that make the systems easier to understand. Over time this
-will grow into the full map for my homelab:
-hosts, services, setup notes, automation, and whatever other spells are needed
-to bring the machines back from bare metal.
+`middleearth` is the container for the foundations and focused experiments used
+to build, rebuild, and understand the homelab. Each realm owns one concern and
+can consume the shared provisioning and Kubernetes foundations without folding
+its implementation into them.
 
 ## The Map
 
 ```text
 middleearth/
 ├── bree/
-│   └── bootstrap.sh
-├── grey-havens/
-│   └── Go life-of-a-packet laboratory
-├── erebor/
-│   └── homelab infrastructure
-├── khazad-dum/
-│   └── reusable Kubernetes platform
+│   └── workstation bootstrap
 ├── imladris/
-│   └── reusable Linux host provisioning
+│   └── Ansible and machine provisioning
+├── khazad-dum/
+│   └── Kubernetes platform
+├── eregion/
+│   └── virtualization: libvirt, cloud-init, vsock, QEMU, images
+├── erebor/
+│   └── Ceph and storage
+├── grey-havens/
+│   └── networking and OVN
 ├── amonsul/
-│   └── hands-on BGP learning lab
+│   └── BGP and routing
+├── gondolin/
+│   └── secrets
+├── morannon/
+│   └── admission control and policy
+├── isengard/
+│   └── Elasticsearch, search, and observability
 ├── LICENSE
 └── README.md
 ```
 
-## Bree
+## Project boundaries
 
-`bree` is the first stop on the road: a bootstrap script for a fresh Linux box.
-It installs the basic tools I want everywhere, writes a practical `zsh`
-configuration, installs Starship, and prepares Tailscale so the machine can join
-the tailnet.
+| Project | Responsibility |
+| --- | --- |
+| [Bree](bree/README.md) | Bootstrap the operator's workstation. |
+| [Imladris](imladris/README.md) | Provision Linux machines with reusable Ansible roles. |
+| [Khazad-dûm](khazad-dum/README.md) | Provide the reusable Kubernetes and Flux platform. |
+| [Eregion](eregion/README.md) | Explore libvirt, QEMU, cloud-init, vsock, and VM images. |
+| [Erebor](erebor/README.md) | Explore Ceph and storage. |
+| [Grey Havens](grey-havens/README.md) | Explore networking, packet flow, OVS, and OVN. |
+| [Amon Sûl](amonsul/README.md) | Explore BGP, route exchange, and routing decisions. |
+| [Gondolin](gondolin/README.md) | Explore secrets management and rotation. |
+| [Morannon](morannon/README.md) | Explore admission control and policy enforcement. |
+| [Isengard](isengard/README.md) | Explore Elasticsearch, search, and observability. |
 
-What it currently sets up:
-
-- `zsh`, `git`, `curl`, `fzf`, `ripgrep`, `bat`, `tmux`, `direnv`, `htop`,
-  `jq`, `unzip`, and certificates
-- optional nicer shell tools like `eza` and `zoxide`, when available
-- Starship prompt
-- a fresh `~/.zshrc`
-- Tailscale and the `tailscaled` service
-
-Run it from the repository root:
-
-```sh
-./bree/bootstrap.sh
-```
-
-After the script finishes, Tailscale still needs the manual login step:
-
-```sh
-sudo tailscale up
-```
-
-Then restart the SSH session or run:
-
-```sh
-exec zsh
-```
-
-## Grey Havens
-
-`grey-havens` is an interactive life-of-a-packet experiment. Its small Go
-service traces the DNS, TCP, TLS, and HTTP stages involved in fetching a URL and
-shows the resulting timeline in a local web page.
-
-```sh
-cd grey-havens
-go run .
-```
-
-Then visit <http://127.0.0.1:8080>. See [grey-havens/README.md](grey-havens/README.md)
-for details and possible next experiments.
-
-## Khazad-dûm
-
-`khazad-dum` is the shared Kubernetes platform for every realm. Flux reconciles
-the Cilium, Traefik, cert-manager, and metrics-server foundation, while separate
-cluster definitions provide an extension point for Erebor, Grey Havens, and
-future labs. See [khazad-dum/README.md](khazad-dum/README.md).
-
-## Imladris
-
-`imladris` is the reusable Ansible foundation for preparing Linux hosts. Its
-modular roles configure packages, users, SSH, k0s, optional containerd,
-optional OVS/OVN, operator tooling, Raspberry Pis, and VMs without deploying
-applications. See [imladris/README.md](imladris/README.md).
-
-## Amon Sûl
-
-`amonsul` is a two-node BGP learning lab. Ansible configures FRRouting and a
-private prefix on each host, verifies eBGP route exchange and kernel
-installation, and demonstrates withdrawal and re-advertisement. See
-[amonsul/README.md](amonsul/README.md).
-
-## Future Realms
-
-This repository is intended to become the source of truth for the full homelab.
-Possible future inhabitants:
-
-- host bootstrap scripts
-- service definitions
-- network and storage notes
-- deployment automation
-- recovery instructions
-- secrets handling documentation
-- inventory for every small box, old laptop, cursed adapter, and noble server
-
-For now, the road begins in Bree.
+Imladris and Khazad-dûm are the reusable foundations. The other realms are
+experiments that may add inventories, machine profiles, platform additions, or
+applications without changing those foundations' core behavior.
 
 ## License
 

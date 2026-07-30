@@ -94,6 +94,21 @@ by default. Override `machine_container_ssh_private_key` when using another
 keypair. Machine deletion is never part of normal preparation and only occurs
 through `machines-reset`.
 
+## Erebor profile
+
+Erebor is now a consumer of Imladris rather than maintaining a separate
+Ansible tree. Its inventory selects Apple Container Machine and points the
+generic machine and k0s roles at Erebor's custom kernel, system image, and k0s
+configuration:
+
+```sh
+make erebor
+```
+
+The lab-specific kernel and image assets remain under `../erebor`; the
+provisioning workflow, machine lifecycle, k0s installation, and kubeconfig
+generation live here. Platform bootstrap continues in Khazad-dûm.
+
 ## Host groups and variables
 
 - `linux` receives the common, user, SSH, and tooling roles.

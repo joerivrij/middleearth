@@ -1,0 +1,30 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-latest-tag
+spec:
+  admission: true
+  background: true
+  validationFailureAction: Audit
+  rules:
+    - name: validate-container-tags
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      validate:
+        allowExistingViolations: true
+        message: "Container images should use an explicit tag instead of latest."
+        foreach:
+          - list: request.object.spec.containers
+            deny:
+              conditions:
+                any:
+                  - key: "{{ element.image }}"
+                    operator: Equals
+                    value: "*:latest"
+                  - key: "{{ element.image }}"
+                    operator: NotEquals
+                    value: "*:*"
+

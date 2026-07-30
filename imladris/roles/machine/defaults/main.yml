@@ -26,3 +26,7 @@ machine_container_ssh_private_key: >-
   {{ lookup('env', 'HOME') }}/.ssh/id_apple_machine
 machine_container_ssh_public_key: "{{ machine_container_ssh_private_key }}.pub"
 machine_container_rebuild_image: false
+machine_container_recreate: false
+machine_container_custom_build_context: ""
+machine_container_custom_containerfile: ""
+machine_container_kernel: ""

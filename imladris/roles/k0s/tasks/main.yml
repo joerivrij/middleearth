@@ -38,7 +38,21 @@
     owner: root
     group: root
     mode: "0600"
-  when: k0s_node_role == "controller"
+  when:
+    - k0s_node_role == "controller"
+    - k0s_config_source | length == 0
+  notify: Restart k0s
+
+- name: Install a cluster-specific k0s controller configuration
+  ansible.builtin.copy:
+    src: "{{ k0s_config_source }}"
+    dest: "{{ k0s_config_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  when:
+    - k0s_node_role == "controller"
+    - k0s_config_source | length > 0
   notify: Restart k0s
 
 - name: Ensure the k0s data directory exists
@@ -99,4 +113,3 @@
     name: "{{ 'k0scontroller' if k0s_node_role == 'controller' else 'k0sworker' }}"
     enabled: true
     state: started
-

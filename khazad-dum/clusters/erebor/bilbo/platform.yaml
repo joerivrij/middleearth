@@ -1,0 +1,101 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: platform-networking
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: ./apps/erebor/overlays/bilbo/cilium
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: khazad-dum
+  timeout: 10m
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: platform-certificates
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: platform-networking
+  interval: 10m
+  path: ./infrastructure/base/cert-manager
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: khazad-dum
+  timeout: 10m
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: platform-ingress
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: platform-networking
+  interval: 10m
+  path: ./apps/erebor/overlays/bilbo/traefik
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: khazad-dum
+  timeout: 10m
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: platform-metrics
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: platform-networking
+  interval: 10m
+  path: ./infrastructure/base/metrics-server
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: khazad-dum
+  timeout: 10m
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: erebor-rook-ceph-operator
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: platform-networking
+  interval: 10m
+  path: ./apps/erebor/base/rook-ceph-operator
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: khazad-dum
+  timeout: 10m
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: erebor-rook-ceph
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: erebor-rook-ceph-operator
+    - name: platform-ingress
+  interval: 10m
+  path: ./apps/erebor/overlays/bilbo/rook-ceph
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: khazad-dum
+  timeout: 30m
+  wait: true
+

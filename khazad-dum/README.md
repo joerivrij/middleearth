@@ -19,6 +19,7 @@ their credentials, DNS provider, storage, and retention requirements are known.
 ```text
 khazad-dum/
 ├── apps/                         # optional, platform-owned applications
+│   └── erebor/                   # optional Erebor storage and overlays
 ├── clusters/
 │   └── example/
 │       ├── kustomization.yaml    # cluster reconciliation entrypoint
@@ -51,6 +52,16 @@ make bootstrap CLUSTER=my-cluster \
 `make bootstrap` installs the Flux controllers, creates the `khazad-dum`
 source, and points the cluster at `clusters/<name>`. The default branch is
 `main`; override `BRANCH` or `KUBECONFIG` when needed.
+
+Erebor uses k0s with a custom CNI, so Cilium must exist before Flux controllers
+can become ready. Its convenience target seeds the same Cilium minor version
+managed by the base, then bootstraps the selected Erebor definition:
+
+```sh
+make bootstrap-erebor ENV=bilbo \
+  KUBECONFIG=../erebor/machine/kubeconfig \
+  REPO_URL=https://github.com/OWNER/khazad-dum.git
+```
 
 For a production repository, `flux bootstrap github` is also a good option
 because it configures deploy credentials. Its sync path should be

@@ -1,7 +1,7 @@
 INVENTORY ?= inventories/example/hosts.yml
 PLAYBOOK ?= playbooks/site.yml
 
-.PHONY: check lint machines machines-container machines-lima machines-reset syntax
+.PHONY: check erebor lint machines machines-container machines-lima machines-reset syntax
 
 syntax:
 	@for playbook in playbooks/*.yml; do \
@@ -27,3 +27,6 @@ machines-container:
 
 machines-reset:
 	@ansible-playbook -i "$(INVENTORY)" playbooks/machines-reset.yml
+
+erebor:
+	@ansible-playbook -i inventories/erebor/hosts.yml playbooks/erebor.yml

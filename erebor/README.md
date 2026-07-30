@@ -1,13 +1,18 @@
 # Erebor
 
-Erebor is a local k0s test cluster managed by Flux. It runs in an Apple
-`container machine`, a persistent Linux VM backed by an OCI image.
+Erebor is the Ceph and storage laboratory for Middle-earth. Its first
+environment is a local k0s test cluster managed by Flux, running in an Apple
+`container machine` backed by an OCI image.
+
+Erebor owns storage experiments and their machine-specific assets. Reusable
+machine provisioning belongs in Imladris, while the shared Kubernetes platform
+and Erebor's optional deployment overlays belong in Khazad-dûm.
 
 ## Create the cluster
 
 Requirements: macOS 26, Apple container, Ansible, the Cilium CLI, kubectl, and
-Flux. The
-machine is provisioned over regular SSH; `container machine run` is not used.
+Flux. Imladris provisions the machine over regular SSH; `container machine
+run` is not used.
 
 Create one reusable Apple-machine keypair on macOS, similar to a key shared by
 a fleet of Raspberry Pis:
@@ -28,13 +33,12 @@ IP automatically. Neither Apple `.test` DNS nor your personal
 `authorized_keys` is required.
 
 ```bash
-cd erebor/ansible
-ansible-playbook site.yaml
-cd ..
-make -C gitops bootstrap-flux ENV=bilbo
+make -C imladris erebor
+make -C khazad-dum bootstrap-erebor ENV=bilbo \
+  KUBECONFIG=../erebor/machine/kubeconfig
 ```
 
-The playbook first builds `kernel/Image`, using Apple's current machine kernel
+The Imladris Erebor profile first builds `kernel/Image`, using Apple's current machine kernel
 configuration as its baseline and adding the socket and TPROXY netfilter
 features required by Cilium's L7 proxy plus the eBPF JIT required by Cilium's
 datapath. It then builds a Debian 13 systemd
@@ -60,7 +64,8 @@ When the machine image, custom kernel, or shared Apple-machine SSH key changes,
 recreate an existing machine explicitly:
 
 ```bash
-ansible-playbook site.yaml -e machine_recreate=true
+ansible-playbook -i imladris/inventories/erebor/hosts.yml \
+  imladris/playbooks/erebor.yml -e machine_container_recreate=true
 ```
 
 Rook on Bilbo uses a 10 GiB sparse file attached as `/dev/loop0`, because Apple
@@ -74,41 +79,40 @@ and is not an HA or production Ceph layout.
 After changing the kernel configuration, rebuild it and recreate the VM:
 
 ```bash
-ansible-playbook site.yaml \
+ansible-playbook -i imladris/inventories/erebor/hosts.yml \
+  imladris/playbooks/erebor.yml \
   -e kernel_rebuild=true \
-  -e machine_recreate=true
+  -e machine_container_recreate=true
 ```
 
 The bootstrap assumes the repository is public. No Git credentials or deploy
 key are stored in the cluster. Commit the bootstrap manifests to `main` before
 expecting reconciliation to become ready.
 
-## GitOps layout
+## Shared automation and platform
 
-Flux-specific files are kept below `gitops/`, separate from machine and Ansible
-provisioning:
+Erebor is now a consumer of the two reusable foundations:
 
 ```text
-erebor/
-└── gitops/
-    ├── cluster/  # environment reconciliation entry points
-    └── infra/    # infrastructure bases and overlays
+imladris/
+├── inventories/erebor/          # Erebor machine profile
+└── playbooks/erebor.yml
+
+khazad-dum/
+├── infrastructure/base/         # shared Kubernetes platform
+├── apps/erebor/                  # optional Erebor storage and overlays
+└── clusters/erebor/              # Bilbo, Thorin, and Smaug composition
 ```
 
-The Makefile bootstraps a GitRepository and one root Flux Kustomization pointing
-at `gitops/cluster/<environment>`. That root creates a separate Flux
-Kustomization for each infrastructure concern, so Cilium, cert-manager, Rook,
-Traefik CRDs, and Traefik reconcile and report status independently. Application
-and component directories can be added below `gitops/` when Erebor actually has
-resources for them.
+Imladris owns machine lifecycle, reusable Linux roles, k0s installation, and
+kubeconfig generation. Erebor keeps only its custom kernel and machine-image
+assets. Khazad-dûm owns Flux, Cilium, cert-manager, Traefik, metrics-server, and
+the optional Rook/Ceph addition selected by Erebor.
 
 ```bash
-make -C gitops bootstrap-bilbo
-make -C gitops bootstrap-thorin
-make -C gitops bootstrap-smaug
-
-# Or select the environment and branch explicitly.
-make -C gitops bootstrap-flux ENV=bilbo BRANCH=main
+make -C khazad-dum bootstrap-erebor ENV=bilbo
+make -C khazad-dum bootstrap-erebor ENV=thorin
+make -C khazad-dum bootstrap-erebor ENV=smaug
 ```
 
 ## Cluster overlays
@@ -120,10 +124,10 @@ make -C gitops bootstrap-flux ENV=bilbo BRANCH=main
 - `smaug` — “The Dragon’s Hoard”: large-scale storage and performance testing.
 
 Bilbo corresponds to the previous small overlay, Thorin to medium, and Smaug to
-large. See [the overlay guide](gitops/infra/overlays/README.md) for the full
-story and infrastructure mapping. Select an environment with the Makefile
-bootstrap target; the selected cluster entry point then references its matching
-infrastructure overlays.
+large. See the
+[overlay guide](../khazad-dum/apps/erebor/overlays/README.md) for the full story
+and infrastructure mapping. The selected Khazad-dûm cluster entry point
+references its matching add-on overlays.
 
 Thorin and Smaug currently inherit Bilbo's loop-backed test device. Their HA
 replica settings describe the intended future multi-node topology; they require
