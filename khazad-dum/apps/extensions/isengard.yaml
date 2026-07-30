@@ -16,7 +16,7 @@ metadata:
   namespace: flux-system
 spec:
   dependsOn:
-    - name: platform-networking
+    - name: cilium
   interval: 10m
   path: ./clusters/wormtongue
   prune: true
@@ -25,4 +25,3 @@ spec:
     name: isengard
   timeout: 20m
   wait: true
-

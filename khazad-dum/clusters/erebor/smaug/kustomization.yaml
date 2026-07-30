@@ -5,14 +5,14 @@ resources:
 patches:
   - target:
       kind: Kustomization
-      name: platform-networking
+      name: cilium
     patch: |-
       - op: replace
         path: /spec/path
         value: ./khazad-dum/apps/erebor/overlays/smaug/cilium
   - target:
       kind: Kustomization
-      name: platform-ingress
+      name: traefik
     patch: |-
       - op: replace
         path: /spec/path

@@ -16,7 +16,7 @@ metadata:
   namespace: flux-system
 spec:
   dependsOn:
-    - name: platform-networking
+    - name: cilium
   interval: 10m
   path: ./clusters/default
   prune: true
@@ -25,4 +25,3 @@ spec:
     name: morannon
   timeout: 15m
   wait: true
-

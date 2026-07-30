@@ -29,7 +29,8 @@ khazad-dum/
 │       ├── cilium/
 │       ├── traefik/
 │       ├── cert-manager/
-│       └── metrics-server/
+│       ├── traefik-crds/
+│       └── metrics/
 └── Makefile
 ```
 
@@ -106,8 +107,8 @@ metadata:
   namespace: flux-system
 spec:
   dependsOn:
-    - name: platform-certificates
-    - name: platform-ingress
+    - name: cert-manager
+    - name: traefik
   interval: 10m
   path: ./clusters/production
   prune: true

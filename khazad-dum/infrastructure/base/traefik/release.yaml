@@ -10,14 +10,14 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: traefik
-      version: "40.x"
+      version: "34.2.x"
   install:
-    crds: CreateReplace
+    crds: Skip
     remediation:
       retries: -1
   interval: 10m
   upgrade:
-    crds: CreateReplace
+    crds: Skip
     remediation:
       retries: 3
   values:

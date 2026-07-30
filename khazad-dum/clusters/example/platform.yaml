@@ -1,7 +1,7 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: platform-networking
+  name: cilium
   namespace: flux-system
 spec:
   interval: 10m
@@ -16,11 +16,11 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: platform-certificates
+  name: cert-manager
   namespace: flux-system
 spec:
   dependsOn:
-    - name: platform-networking
+    - name: cilium
   interval: 10m
   path: ./khazad-dum/infrastructure/base/cert-manager
   prune: true
@@ -33,11 +33,29 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: platform-ingress
+  name: traefik-crds
   namespace: flux-system
 spec:
   dependsOn:
-    - name: platform-networking
+    - name: cilium
+  interval: 10m
+  path: ./khazad-dum/infrastructure/base/traefik-crds
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: khazad-dum
+  timeout: 10m
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: traefik
+namespace: flux-system
+spec:
+  dependsOn:
+    - name: cilium
+    - name: traefik-crds
   interval: 10m
   path: ./khazad-dum/infrastructure/base/traefik
   prune: true
@@ -50,13 +68,13 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: platform-metrics
+  name: metrics
   namespace: flux-system
 spec:
   dependsOn:
-    - name: platform-networking
+    - name: cilium
   interval: 10m
-  path: ./khazad-dum/infrastructure/base/metrics-server
+  path: ./khazad-dum/infrastructure/base/metrics
   prune: true
   sourceRef:
     kind: GitRepository
