@@ -5,6 +5,7 @@ CLUSTER ?= khazad-dum
 KUBECONFIG ?= $(HOME)/.kube/config
 CLUSTER_PATH := ./$(REPO_ROOT)/clusters/$(CLUSTER)
 CILIUM_VERSION ?= 1.19.6
+CILIUM_NAMESPACE ?= cilium-system
 SINGLE_NODE_KUBECONFIG ?= ../imladris/machine-build/khazad-dum.kubeconfig
 
 .PHONY: bootstrap check-tools install seed-cilium status validate
@@ -33,12 +34,18 @@ bootstrap: check-tools
 seed-cilium:
 	@command -v cilium >/dev/null 2>&1 || { echo "cilium CLI not found" >&2; exit 1; }
 	@command -v kubectl >/dev/null 2>&1 || { echo "kubectl not found" >&2; exit 1; }
+	@if test "$(CILIUM_NAMESPACE)" != "kube-system" && \
+		KUBECONFIG="$(KUBECONFIG)" kubectl get daemonset cilium \
+		--namespace kube-system >/dev/null 2>&1; then \
+		echo "legacy Cilium installation found in kube-system; recreate or migrate this disposable cluster first" >&2; \
+		exit 1; \
+	fi
 	@action=install; \
 	if KUBECONFIG="$(KUBECONFIG)" kubectl get daemonset cilium \
-		--namespace kube-system >/dev/null 2>&1; then action=upgrade; fi; \
+		--namespace "$(CILIUM_NAMESPACE)" >/dev/null 2>&1; then action=upgrade; fi; \
 	KUBECONFIG="$(KUBECONFIG)" cilium "$$action" \
 		--version "$(CILIUM_VERSION)" \
-		--namespace kube-system \
+		--namespace "$(CILIUM_NAMESPACE)" \
 		--set ipam.mode=kubernetes \
 		--set kubeProxyReplacement=false \
 		--wait \

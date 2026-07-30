@@ -97,6 +97,8 @@ cluster-specific settings belong in a cluster overlay or a separate component.
 In particular:
 
 - Cilium defaults to Kubernetes IPAM and does not replace kube-proxy.
+- Cilium is installed in the dedicated `cilium-system` namespace during both
+  bootstrap seeding and Flux reconciliation.
 - Traefik uses a `LoadBalancer` Service; bare-metal clusters need an address
   provider such as Cilium L2 announcements or MetalLB.
 - No default `ClusterIssuer` is included because ACME email, challenge type,
