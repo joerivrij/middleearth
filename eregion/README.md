@@ -15,4 +15,3 @@ configuration belongs in Imladris, and Kubernetes deployment belongs in
 Khazad-dûm.
 
 Status: project boundary established; experiments will be added incrementally.
-

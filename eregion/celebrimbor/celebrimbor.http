@@ -1,0 +1,38 @@
+@base_url = http://bree:3000
+
+### Create a VM
+# Omit image to use ubuntu-24.04-arm64.qcow2.
+POST {{base_url}}/v1/vms
+Content-Type: application/json
+
+{
+  "name": "annatar",
+  "memory_mib": 1024,
+  "vcpus": 2
+}
+> {%
+    client.global.set("vm_id", response.body.id);
+%}
+
+### Creating a VM with the same name returns 409 Conflict
+POST {{base_url}}/v1/vms
+Content-Type: application/json
+
+{
+  "name": "test-vm"
+}
+
+### List VMs
+GET {{base_url}}/v1/vms
+
+### Get a VM
+GET {{base_url}}/v1/vms/{{vm_id}}
+
+### Delete a VM
+DELETE {{base_url}}/v1/vms/{{vm_id}}
+
+### Custom delete
+DELETE {{base_url}}/v1/vms/be44e743-b832-4965-a849-8cc3c0ce9c94
+
+### The deleted VM now returns 404 Not Found
+GET {{base_url}}/v1/vms/{{vm_id}}
