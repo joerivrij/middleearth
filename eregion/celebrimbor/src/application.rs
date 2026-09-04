@@ -46,6 +46,10 @@ impl VmService {
             return Err(CreateVmError::InvalidVcpus);
         }
 
+        if !(4..=10).contains(&spec.disk_gib) {
+            return Err(CreateVmError::InvalidStorage);
+        }
+
         if spec.image.as_ref().is_some_and(|image| {
             image.is_empty()
                 || !image
@@ -93,6 +97,7 @@ pub enum CreateVmError {
     InvalidName,
     InvalidMemory,
     InvalidVcpus,
+    InvalidStorage,
     InvalidImage,
     ImageNotFound,
     NameAlreadyExists,

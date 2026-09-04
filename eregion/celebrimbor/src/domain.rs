@@ -63,6 +63,7 @@ pub struct Metadata {
 pub struct CreateVmSpec {
     pub name: String,
     pub memory_mib: u64,
+    pub disk_gib: u64,
     pub vcpus: u32,
     pub image: Option<String>,
 }

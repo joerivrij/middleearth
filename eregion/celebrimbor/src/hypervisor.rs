@@ -24,6 +24,7 @@ impl Hypervisor for InMemoryHypervisor {
         let CreateVmSpec {
             name,
             memory_mib,
+            disk_gib,
             vcpus,
             image,
         } = spec;
@@ -45,7 +46,7 @@ impl Hypervisor for InMemoryHypervisor {
                 memory_mib,
                 vcpus,
                 disk: Disk {
-                    capacity_bytes: 10 * 1024 * 1024 * 1024,
+                    capacity_bytes: disk_gib * 1024 * 1024 * 1024,
                     allocated_bytes: 0,
                     format: Some("qcow2".to_owned()),
                 },

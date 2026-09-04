@@ -20,6 +20,10 @@ fn default_vcpus() -> u32 {
     1
 }
 
+fn default_disk_gib() -> u64 {
+    8
+}
+
 pub fn router(vm_service: VmService) -> Router {
     Router::new()
         .route("/v1/vms", post(create_vm).get(list_vms))
@@ -37,6 +41,9 @@ struct CreateVmRequest {
 
     #[serde(default = "default_vcpus")]
     vcpus: u32,
+
+    #[serde(default = "default_disk_gib")]
+    disk_gib: u64,
 }
 
 async fn create_vm(
@@ -46,6 +53,7 @@ async fn create_vm(
     let spec = CreateVmSpec {
         name: request.name,
         memory_mib: request.memory_mib,
+        disk_gib: request.disk_gib,
         vcpus: request.vcpus,
         image: request.image,
     };
@@ -55,6 +63,7 @@ async fn create_vm(
         | CreateVmError::InvalidMemory
         | CreateVmError::InvalidVcpus
         | CreateVmError::InvalidImage
+        | CreateVmError::InvalidStorage
         | CreateVmError::ImageNotFound => StatusCode::BAD_REQUEST,
         CreateVmError::NameAlreadyExists => StatusCode::CONFLICT,
         CreateVmError::Hypervisor(message) => {

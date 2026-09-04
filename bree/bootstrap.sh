@@ -18,6 +18,7 @@ sudo apt install -y \
   direnv \
   htop \
   jq \
+  gopass \
   unzip \
   ca-certificates
 
@@ -68,7 +69,10 @@ alias g='git'
 alias ..='cd ..'
 alias ...='cd ../..'
 
-command -v eza >/dev/null && alias ls='eza --icons=auto --group-directories-first'
+# eza's icons require a Nerd Font in the terminal that displays this shell.
+# SSH cannot configure that client-side font, so keep icons off by default.
+# Set EZA_ICONS=auto after selecting a Nerd Font locally.
+command -v eza >/dev/null && alias ls='eza --icons="${EZA_ICONS:-never}" --group-directories-first'
 command -v batcat >/dev/null && alias cat='batcat --paging=never'
 command -v bat >/dev/null && alias cat='bat --paging=never'
 EOF
@@ -78,23 +82,4 @@ if [ "$SHELL" != "$(command -v zsh)" ]; then
   chsh -s "$(command -v zsh)"
 fi
 
-echo "== Installing Tailscale =="
-if ! command -v tailscale >/dev/null 2>&1; then
-  curl -fsSL https://tailscale.com/install.sh | sh
-fi
-
-echo "== Enabling Tailscale daemon =="
-sudo systemctl enable --now tailscaled
-
-echo
-echo "== Manual step required =="
-echo "Run:"
-echo "  sudo tailscale up"
-echo
-echo "Then open the login URL it prints."
-echo
-echo "After login, check:"
-echo "  tailscale status"
-echo "  tailscale ip -4"
-echo
 echo "Done. Restart your SSH session or run: exec zsh"
