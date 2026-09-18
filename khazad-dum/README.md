@@ -56,6 +56,10 @@ source, and points the cluster at `khazad-dum/clusters/<name>`. The current
 default branch is `main`; override `BRANCH` or `KUBECONFIG`
 when needed.
 
+Machine creation and k0s installation live in Imladris, including the Apple
+kernel/image sources under `imladris/apple_machine`. Select Lima, Apple
+Container Machine, or an existing bare-metal host there.
+
 For a disposable local test, follow the
 [single-node k0s on Lima guide](docs/lima-single-node.md).
 

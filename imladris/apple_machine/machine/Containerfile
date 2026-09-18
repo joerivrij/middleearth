@@ -17,12 +17,9 @@ RUN : > /etc/machine-id && : > /var/lib/dbus/machine-id
 # cgroup v2. Apple container machines are full Linux VMs, but their OCI-rootfs
 # boot leaves the guest mount tree private, so make it recursively shared
 # before k0s/containerd starts.
-COPY erebor-mount-propagation.service /etc/systemd/system/erebor-mount-propagation.service
-COPY erebor-ceph-loop /usr/local/sbin/erebor-ceph-loop
-COPY erebor-ceph-loop.service /etc/systemd/system/erebor-ceph-loop.service
+COPY imladris-mount-propagation.service /etc/systemd/system/imladris-mount-propagation.service
 COPY modules/ /lib/modules/
-RUN chmod 0755 /usr/local/sbin/erebor-ceph-loop && \
-    systemctl enable erebor-mount-propagation.service erebor-ceph-loop.service
+RUN systemctl enable imladris-mount-propagation.service
 
 # The private half remains in ~/.ssh on macOS. Ansible stages only the public
 # half in the ignored build-context directory before building this image.
@@ -31,5 +28,5 @@ RUN chmod 0644 /etc/ssh/apple_machine_authorized_keys && \
     printf '%s\n' \
       'PubkeyAuthentication yes' \
       'PasswordAuthentication no' \
-      'AuthorizedKeysFile /etc/ssh/apple_machine_authorized_keys' \
-      > /etc/ssh/sshd_config.d/erebor.conf
+      'AuthorizedKeysFile .ssh/authorized_keys /etc/ssh/apple_machine_authorized_keys' \
+      > /etc/ssh/sshd_config.d/imladris.conf

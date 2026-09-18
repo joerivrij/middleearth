@@ -18,7 +18,7 @@ WORKDIR /build/linux
 # Preserve Apple's/Kata's known-good VM configuration and add the netfilter
 # facilities required by Cilium L7/FQDN proxy redirection. Build these into the
 # kernel so the Debian OCI rootfs does not need matching kernel modules.
-RUN scripts/config --set-str LOCALVERSION "-erebor" && \
+RUN scripts/config --set-str LOCALVERSION "-imladris" && \
     scripts/config --disable LOCALVERSION_AUTO && \
     scripts/config --enable BPF_JIT && \
     scripts/config --enable BPF_JIT_DEFAULT_ON && \
