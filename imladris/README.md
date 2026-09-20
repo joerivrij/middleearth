@@ -62,63 +62,85 @@ The example inventory deliberately leaves `imladris_users` empty. Add at least
 one administrator with a public key before disabling SSH password
 authentication.
 
-## Create local machines on macOS
+## Choose compute, then install k0s
 
-The `machine` role supports two interchangeable backends:
+The `machine` role registers every target in `provisioned_machines`:
 
-- `machine_backend: lima` renders a Debian 13 Lima definition, creates or
-  starts it with `limactl`, and reuses Lima's generated SSH configuration.
-- `machine_backend: container` builds a minimal Debian 13 systemd image,
-  creates an Apple Container Machine, discovers its address, and connects with
-  the configured SSH keypair.
+| `machine_backend` | Behavior |
+| --- | --- |
+| `baremetal` | Connect to an existing Linux host with `machine_address` and `machine_ssh_user`. |
+| `lima` | Create/start a Lima VM and use its generated SSH configuration. |
+| `container` | Build/create an Apple Container Machine and connect over SSH. |
 
-Both backends register their guest in the same temporary
-`provisioned_machines` group. The second play then applies the normal `common`,
-`users`, `ssh`, and `tooling` roles, so guest preparation does not depend on
-the hypervisor.
+VM creation runs locally on macOS. Bare metal can be managed from any Ansible
+control host. The `machine_hosts` inventory entries describe the local
+provisioner; put guest-specific variables in `machine_guest_vars`. Group-level
+`all` variables also apply to the guests. Provisioners run serially because
+Ansible's `add_host` action bypasses the normal host loop.
+
+From `imladris/`:
 
 ```sh
-# Create and prepare both example backends.
-make machines
+# Only create/connect and prepare Linux.
+make machines INVENTORY=inventories/example/hosts.yml
 
-# Or select one backend.
-make machines-lima
-make machines-container
-
-# Explicitly delete the configured machines.
-make machines-reset
+# Create/connect, prepare Linux, install single-node k0s, retrieve kubeconfig.
+make machines-k0s K0S_INVENTORY=inventories/khazad-dum/hosts.yml  # Lima
+make machines-k0s K0S_INVENTORY=inventories/apple/hosts.yml      # Apple
+make machines-k0s K0S_INVENTORY=inventories/baremetal/hosts.yml  # existing host
 ```
 
-Apple Container Machine expects `~/.ssh/id_apple_machine` and its `.pub` file
-by default. Override `machine_container_ssh_private_key` when using another
-keypair. Machine deletion is never part of normal preparation and only occurs
-through `machines-reset`.
+Edit the bare-metal example's address and SSH user before running it. All
+backends need working sudo in the guest. Apple expects the reusable keypair
+`~/.ssh/id_apple_machine` and `~/.ssh/id_apple_machine.pub`. Only the public key
+is staged in the ignored image build context.
 
-For the complete disposable single-node k0s cluster used to test Khazad-dûm:
+`machines-k0s.yml` creates an independent single-node cluster on each selected
+host. Use `machine_guest_vars` to give multiple hosts distinct cluster names
+and output paths. For a controller/worker topology, use the existing
+`k0s.yml` playbook with `k0s_controllers` / `k0s_workers` and join tokens.
+
+`make single-node` remains an alias for the Lima profile. Its kubeconfig is
+`machine-build/khazad-dum.kubeconfig`; run `make -C ../khazad-dum install`
+afterward. The Apple profile writes the same path, so use one profile at a
+time or override `kubeconfig_path`. Other inventories default to
+`machine-build/<guest-inventory-name>.kubeconfig`.
+
+The shared flow renders an address-aware k0s configuration with a custom CNI.
+Set `k0s_node_address` for hosts with multiple interfaces and
+`k0s_api_endpoint` for the operator's reachable API URL. A supplied
+`k0s_config_source` is copied unchanged; its API certificate SANs must cover
+the chosen endpoint. Cilium and Flux installation remain in Khazad-dûm.
+
+Reusable Apple kernel/image sources live in `apple_machine/`. The Apple k0s
+inventory selects that image with `machine_container_build_kernel: true`.
+Rebuild/recreation are explicit options:
 
 ```sh
-make single-node
+ansible-playbook -i inventories/apple/hosts.yml playbooks/machines-k0s.yml \
+  -e kernel_rebuild=true -e machine_container_recreate=true
 ```
 
-This creates a Lima instance named `imladris` and a Kubernetes node and
-cluster named `khazad-dum`, then writes its kubeconfig to
-`machine-build/khazad-dum.kubeconfig`. Continue with `make install` in
-Khazad-dûm.
+`make machines-reset INVENTORY=...` deletes configured VMs. It rejects bare
+metal. Additional Lima disks are retained; normal provisioning never deletes
+them. Changes to a Lima VM's disks/network definition require explicit VM
+recreation; merely rendering a new definition does not update an existing VM.
 
-## Erebor profile
-
-Erebor is now a consumer of Imladris rather than maintaining a separate
-Ansible tree. Its inventory selects Apple Container Machine and points the
-generic machine and k0s roles at Erebor's custom kernel, system image, and k0s
-configuration:
+## Erebor consumers
 
 ```sh
+# Bilbo: Apple k0s host plus Erebor's loop-backed development OSD device.
 make erebor
+
+# Smaug: Linux hosts plus standalone Ceph; no k0s on the storage hosts.
+make smaug
 ```
 
-The lab-specific kernel and image assets remain under `../erebor`; the
-provisioning workflow, machine lifecycle, k0s installation, and kubeconfig
-generation live here. Platform bootstrap continues in Khazad-dûm.
+Bilbo uses `inventories/erebor`; Smaug uses `inventories/smaug`. Override
+`EREBOR_INVENTORY` or `SMAUG_INVENTORY` for another backend/topology.
+Erebor owns the Ceph roles and loop-device helper. Imladris composes them with
+its machine preparation. Follow [Erebor's guide](../erebor/README.md) for the
+optional Rook external-cluster consumer flow and Smaug network prerequisites.
 
 ## Host groups and variables
 

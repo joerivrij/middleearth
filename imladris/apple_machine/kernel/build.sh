@@ -3,9 +3,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KERNEL_VERSION="${KERNEL_VERSION:-6.18.15}"
-IMAGE="${KERNEL_IMAGE:-local/erebor-kernel:${KERNEL_VERSION}}"
-PROBE="erebor-kernel-config-probe"
-ARTIFACT="erebor-kernel-artifact"
+IMAGE="${KERNEL_IMAGE:-local/imladris-kernel:${KERNEL_VERSION}}"
+PROBE="imladris-kernel-config-probe"
+ARTIFACT="imladris-kernel-artifact"
 MACHINE_MODULES="${ROOT}/../machine/modules"
 
 command -v container >/dev/null || {
@@ -37,5 +37,5 @@ container cp "${ARTIFACT}:/modules/lib/modules" "${MACHINE_MODULES}"
 container rm --force "${ARTIFACT}"
 chmod 0644 "${ROOT}/Image"
 
-echo "custom Erebor kernel built at ${ROOT}/Image"
+echo "custom Imladris kernel built at ${ROOT}/Image"
 echo "matching kernel modules staged at ${MACHINE_MODULES}"

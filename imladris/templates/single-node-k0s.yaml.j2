@@ -1,0 +1,24 @@
+# Managed by Ansible (Imladris).
+apiVersion: k0s.k0sproject.io/v1beta1
+kind: ClusterConfig
+metadata:
+  name: {{ k0s_cluster_name }}
+spec:
+  api:
+    address: {{ machine_k0s_guest_ip }}
+    port: 6443
+    k0sApiPort: 9443
+    sans:
+      - {{ machine_k0s_guest_ip }}
+      - localhost
+      - 127.0.0.1
+  storage:
+    type: etcd
+    etcd:
+      peerAddress: {{ machine_k0s_guest_ip }}
+  network:
+    provider: custom
+    kubeProxy:
+      mode: iptables
+    podCIDR: 10.244.0.0/16
+    serviceCIDR: 10.96.0.0/12

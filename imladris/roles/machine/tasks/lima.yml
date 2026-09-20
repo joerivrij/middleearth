@@ -47,6 +47,24 @@
     mode: "0700"
   when: machine_state == "present"
 
+- name: Inspect existing Lima disks
+  ansible.builtin.command:
+    argv: [limactl, disk, list, --json]
+  register: lima_disks
+  changed_when: false
+  when:
+    - machine_state == "present"
+    - machine_lima_additional_disks | length > 0
+
+- name: Create additional raw Lima disks
+  ansible.builtin.command:
+    argv: [limactl, disk, create, "{{ item.name }}", --size, "{{ item.size }}"]
+  loop: "{{ machine_lima_additional_disks }}"
+  when:
+    - machine_state == "present"
+    - item.name not in (lima_disks.stdout_lines | map('from_json') | map(attribute='name') | list)
+  changed_when: true
+
 - name: Render the Lima machine configuration
   ansible.builtin.template:
     src: lima.yaml.j2
@@ -107,4 +125,9 @@
   retries: 30
   delay: 2
   until: lima_guest_ready.rc == 0
+  when: machine_state == "present"
+
+- name: Apply inventory guest variables
+  ansible.builtin.add_host:
+  args: "{{ machine_guest_vars | combine({'name': 'lima-' ~ machine_name}) }}"
   when: machine_state == "present"

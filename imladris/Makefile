@@ -1,7 +1,10 @@
 INVENTORY ?= inventories/example/hosts.yml
 PLAYBOOK ?= playbooks/site.yml
+K0S_INVENTORY ?= inventories/khazad-dum/hosts.yml
+EREBOR_INVENTORY ?= inventories/erebor/hosts.yml
+SMAUG_INVENTORY ?= inventories/smaug/hosts.yml
 
-.PHONY: check erebor lint machines machines-container machines-lima machines-reset single-node syntax
+.PHONY: check erebor lint machines machines-container machines-lima machines-baremetal machines-k0s machines-reset single-node smaug syntax
 
 syntax:
 	@for playbook in playbooks/*.yml; do \
@@ -25,13 +28,20 @@ machines-container:
 	@ansible-playbook -i "$(INVENTORY)" playbooks/machines.yml \
 		-e machine_backend_filter=container
 
+machines-baremetal:
+	@ansible-playbook -i "$(INVENTORY)" playbooks/machines.yml \
+		-e machine_backend_filter=baremetal
+
+machines-k0s:
+	@ansible-playbook -i "$(K0S_INVENTORY)" playbooks/machines-k0s.yml
+
 machines-reset:
 	@ansible-playbook -i "$(INVENTORY)" playbooks/machines-reset.yml
 
-single-node:
-	@ANSIBLE_LOCAL_TEMP=/tmp/imladris-ansible-local ansible-playbook \
-		-i inventories/khazad-dum/hosts.yml \
-		playbooks/lima-k0s.yml
+single-node: machines-k0s
 
 erebor:
-	@ansible-playbook -i inventories/erebor/hosts.yml playbooks/erebor.yml
+	@ansible-playbook -i "$(EREBOR_INVENTORY)" playbooks/erebor.yml
+
+smaug:
+	@ansible-playbook -i "$(SMAUG_INVENTORY)" playbooks/smaug.yml
