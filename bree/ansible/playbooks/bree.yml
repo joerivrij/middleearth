@@ -1,0 +1,11 @@
+---
+- name: Bree - toolbox, tailnet and DNS
+  hosts: bree
+  become: true
+  roles:
+    - role: pi_toolbox
+      tags: [toolbox]
+    - role: tailscale
+      tags: [tailscale]
+    - role: unbound
+      tags: [dns]
