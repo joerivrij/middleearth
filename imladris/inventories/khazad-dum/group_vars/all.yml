@@ -1,0 +1,39 @@
+---
+middleearth_dir: "{{ playbook_dir | dirname | dirname }}"
+
+machine_cpus: 4
+machine_memory_gib: 6
+machine_disk_gib: 40
+machine_lima_kubernetes_api_host_port: 6443
+machine_lima_http_host_port: 5687
+machine_lima_https_host_port: 8443
+
+k0s_version: v1.35.2+k0s.0
+k0s_cluster_name: khazad-dum
+k0s_node_name: khazad-dum
+k0s_node_role: controller
+k0s_controller_enable_worker: false
+k0s_controller_single: true
+k0s_generated_config_path: >-
+  {{ middleearth_dir }}/imladris/machine-build/khazad-dum-k0s.yaml
+kubeconfig_path: >-
+  {{ middleearth_dir }}/imladris/machine-build/khazad-dum.kubeconfig
+
+common_packages:
+  - ca-certificates
+  - conntrack
+  - curl
+  - git
+  - iptables
+  - jq
+  - lvm2
+  - openssh-client
+  - python3
+  - rsync
+  - socat
+  - tar
+  - unzip
+
+imladris_users: []
+
+k0s_api_endpoint: "https://127.0.0.1:{{ machine_lima_kubernetes_api_host_port }}"

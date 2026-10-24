@@ -1,0 +1,19 @@
+---
+- name: Install Bilbo loop device helper
+  ansible.builtin.copy:
+    src: "{{ playbook_dir | dirname | dirname }}/erebor/machine/erebor-ceph-loop"
+    dest: /usr/local/sbin/erebor-ceph-loop
+    mode: "0755"
+
+- name: Install Bilbo loop device service
+  ansible.builtin.copy:
+    src: "{{ playbook_dir | dirname | dirname }}/erebor/machine/erebor-ceph-loop.service"
+    dest: /etc/systemd/system/erebor-ceph-loop.service
+    mode: "0644"
+
+- name: Enable the Bilbo test device
+  ansible.builtin.systemd_service:
+    name: erebor-ceph-loop
+    enabled: true
+    state: started
+    daemon_reload: true

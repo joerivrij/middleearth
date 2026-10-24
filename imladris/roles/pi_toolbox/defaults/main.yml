@@ -1,0 +1,18 @@
+---
+pi_toolbox_packages:
+  - btop
+  - fzf
+  - ripgrep
+  - fd-find
+  - bat
+  - tmux
+  - ncdu
+  - jq
+  - curl
+  - wget
+  - git
+  - unzip
+  - ca-certificates
+  - lsof
+  - tree
+pi_toolbox_extra_packages: []

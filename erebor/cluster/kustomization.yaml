@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Erebor owns this selection. Replace bilbo with thorin or smaug without
+# changing Khazad-dûm. Smaug is external mode; use a fresh consumer rather
+# than switching a local Ceph deployment without a data migration.
+resources:
+  - ../clusters/bilbo
+

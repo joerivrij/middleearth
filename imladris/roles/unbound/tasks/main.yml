@@ -1,0 +1,36 @@
+---
+- name: Require a Debian-based system
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.os_family == 'Debian'
+      - unbound_interfaces | length > 0
+      - unbound_allowed_networks | length > 0
+    fail_msg: Unbound needs a Debian-based system and explicit interfaces and client networks.
+
+- name: Install Unbound
+  ansible.builtin.apt:
+    name: unbound
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Configure the Bree resolver
+  ansible.builtin.template:
+    src: bree.conf.j2
+    dest: /etc/unbound/unbound.conf.d/bree.conf
+    owner: root
+    group: root
+    mode: '0644'
+    validate: /usr/sbin/unbound-checkconf %s
+  notify: Restart Unbound
+
+- name: Validate the complete Unbound configuration
+  ansible.builtin.command: /usr/sbin/unbound-checkconf /etc/unbound/unbound.conf
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Enable Unbound
+  ansible.builtin.systemd_service:
+    name: unbound
+    enabled: true
+    state: started

@@ -1,0 +1,9 @@
+---
+unbound_interfaces:
+  - 127.0.0.1
+unbound_allowed_networks:
+  - 127.0.0.0/8
+# Empty means recursive resolution. Set upstream IP addresses for forwarding.
+unbound_forwarders: []
+# Optional local records, for example: 'bree.home.arpa. IN A 192.168.1.10'
+unbound_local_records: []

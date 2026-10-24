@@ -1,0 +1,12 @@
+# Managed by Ansible. Only these explicitly selected disks are offered to Ceph.
+{% for host in ceph_hosts %}
+---
+service_type: osd
+service_id: smaug-{{ hostvars[host].ansible_facts.hostname }}
+placement:
+  hosts:
+    - {{ hostvars[host].ansible_facts.hostname | to_json }}
+spec:
+  data_devices:
+    paths: {{ hostvars[host].ceph_osd_devices | to_json }}
+{% endfor %}

@@ -1,0 +1,109 @@
+---
+- name: Validate cluster topology
+  ansible.builtin.assert:
+    that:
+      - ceph_hosts | map('extract', hostvars, ['ansible_facts', 'hostname']) | unique | length == ceph_hosts | length
+      - (ceph_hosts | length == 1) == (ceph_single_host | bool)
+      - ceph_pool_size | int >= 1
+      - ceph_pool_min_size | int >= 1
+      - ceph_pool_min_size | int <= ceph_pool_size | int
+      - ceph_single_host | bool or ceph_hosts | length >= ceph_pool_size | int
+    fail_msg: "Set ceph_single_host for a lab; otherwise provide enough independent hosts for the pool replicas."
+
+- name: Bootstrap Ceph once
+  ansible.builtin.command:
+    argv: >-
+      {{ ['cephadm', '--image', ceph_image, 'bootstrap',
+          '--mon-ip', ceph_address, '--skip-dashboard', '--skip-monitoring-stack']
+         + (['--single-host-defaults'] if ceph_single_host | bool else []) }}
+    creates: /etc/ceph/ceph.conf
+  no_log: true
+
+- name: Read the Ceph orchestration public key
+  ansible.builtin.slurp:
+    src: /etc/ceph/ceph.pub
+  register: ceph_public_key
+
+- name: Authorize Ceph orchestration on the selected hosts
+  ansible.posix.authorized_key:
+    user: root
+    key: "{{ ceph_public_key.content | b64decode }}"
+    state: present
+  delegate_to: "{{ item }}"
+  loop: "{{ ceph_hosts }}"
+
+- name: List registered Ceph hosts
+  ansible.builtin.command:
+    argv: [cephadm, shell, --, ceph, orch, host, ls, --format, json]
+  register: ceph_registered_hosts
+  changed_when: false
+
+- name: Register additional Ceph hosts
+  ansible.builtin.command:
+    argv:
+      - cephadm
+      - shell
+      - --
+      - ceph
+      - orch
+      - host
+      - add
+      - "{{ hostvars[item].ansible_facts.hostname }}"
+      - "{{ hostvars[item].ceph_address }}"
+  loop: "{{ ceph_hosts }}"
+  when: >-
+    hostvars[item].ansible_facts.hostname not in
+    (ceph_registered_hosts.stdout | from_json | map(attribute='hostname') | list)
+  changed_when: true
+
+- name: Render explicit OSD device specifications
+  ansible.builtin.template:
+    src: osds.yaml.j2
+    dest: /etc/ceph/smaug-osds.yaml
+    mode: "0600"
+
+- name: Reconcile the selected OSD devices
+  ansible.builtin.command:
+    argv: [cephadm, shell, --mount, /etc/ceph/smaug-osds.yaml, --, ceph, orch, apply, -i, /mnt/smaug-osds.yaml]
+  changed_when: true
+
+- name: Wait for the requested number of OSDs to be up
+  ansible.builtin.command:
+    argv: [cephadm, shell, --, ceph, osd, stat, --format, json]
+  register: ceph_osd_status
+  changed_when: false
+  retries: 90
+  delay: 10
+  until:
+    - ceph_osd_status.rc == 0
+    - (ceph_osd_status.stdout | from_json).num_up_osds | int >= ceph_pool_size | int
+
+- name: Inspect pools
+  ansible.builtin.command:
+    argv: [cephadm, shell, --, ceph, osd, pool, ls, --format, json]
+  register: ceph_pools
+  changed_when: false
+
+- name: Create the consumer RBD pool
+  ansible.builtin.command:
+    argv: [cephadm, shell, --, ceph, osd, pool, create, "{{ ceph_pool_name }}"]
+  when: ceph_pool_name not in (ceph_pools.stdout | from_json)
+  changed_when: true
+
+- name: Set the RBD pool replication size
+  ansible.builtin.command:
+    argv: >-
+      {{ ['cephadm', 'shell', '--', 'ceph', 'osd', 'pool', 'set',
+          ceph_pool_name, 'size', ceph_pool_size | string]
+         + (['--yes-i-really-mean-it'] if ceph_pool_size | int == 1 else []) }}
+  changed_when: true
+
+- name: Set the RBD pool minimum replica count
+  ansible.builtin.command:
+    argv: [cephadm, shell, --, ceph, osd, pool, set, "{{ ceph_pool_name }}", min_size, "{{ ceph_pool_min_size | string }}"]
+  changed_when: true
+
+- name: Initialize the RBD pool
+  ansible.builtin.command:
+    argv: [cephadm, shell, --, rbd, pool, init, "{{ ceph_pool_name }}"]
+  changed_when: true
