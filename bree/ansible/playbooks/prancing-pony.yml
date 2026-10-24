@@ -1,0 +1,6 @@
+---
+- name: Prancing Pony - a common toolbox for every Pi
+  hosts: raspberry_pis
+  become: true
+  roles:
+    - role: pi_toolbox

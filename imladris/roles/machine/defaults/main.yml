@@ -35,3 +35,22 @@ machine_container_recreate: false
 machine_container_custom_build_context: ""
 machine_container_custom_containerfile: ""
 machine_container_kernel: ""
+
+# Existing machines are prepared over SSH; no host is created or deleted.
+machine_address: ""
+machine_ssh_user: ""
+machine_ssh_port: 22
+machine_ssh_private_key: ""
+# Per-machine settings copied to the dynamically registered guest.
+machine_guest_vars: {}
+
+# Optional custom kernel/system image for k0s on Apple Container Machine.
+apple_machine_dir: "{{ playbook_dir | dirname }}/apple_machine"
+machine_container_build_kernel: false
+kernel_rebuild: false
+
+# Disks are created if absent; reset retains them. Lima must not format Ceph disks.
+machine_lima_additional_disks: []
+
+# Optional complete Lima network objects; empty retains machine_lima_network.
+machine_lima_networks: []

@@ -1,6 +1,7 @@
 ---
 - name: Delete Imladris-managed local machines
   hosts: machine_hosts
+  serial: 1
   gather_facts: true
   vars:
     machine_state: absent

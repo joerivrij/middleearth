@@ -1,0 +1,16 @@
+---
+machine_cpus: 4
+machine_memory_gib: 8
+machine_disk_gib: 30
+imladris_users: []
+ceph_single_host: true
+ceph_pool_size: 2
+ceph_pool_min_size: 1
+ceph_pool_name: smaug-rbd
+
+# Configure Lima's shared socket_vmnet network before starting this profile.
+# The consumer VMs must join this same network (vzNAT isolates guests).
+machine_lima_networks:
+  - lima: shared
+    interface: lima0
+ceph_address_interface: lima0

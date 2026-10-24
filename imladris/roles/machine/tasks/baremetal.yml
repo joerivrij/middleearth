@@ -1,0 +1,23 @@
+---
+- name: Validate the existing host
+  ansible.builtin.assert:
+    that:
+      - machine_state == "present"
+      - machine_address | length > 0
+      - machine_ssh_user | length > 0
+    fail_msg: "Bare metal requires machine_address and machine_ssh_user; deletion is unsupported."
+
+- name: Register the existing Linux host
+  ansible.builtin.add_host:
+    name: "baremetal-{{ machine_name }}"
+    groups: provisioned_machines
+    ansible_host: "{{ machine_address }}"
+    ansible_user: "{{ machine_ssh_user }}"
+    ansible_port: "{{ machine_ssh_port }}"
+    ansible_connection: ssh
+    ansible_ssh_private_key_file: "{{ machine_ssh_private_key | default(omit, true) }}"
+    ansible_python_interpreter: /usr/bin/python3
+
+- name: Apply inventory guest variables to the existing host
+  ansible.builtin.add_host:
+  args: "{{ machine_guest_vars | combine({'name': 'baremetal-' ~ machine_name}) }}"

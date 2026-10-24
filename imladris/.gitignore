@@ -16,3 +16,8 @@ inventories/*/hosts.yml
 # Never commit secrets or vault passwords.
 *.vault-password
 *.agekey
+
+!inventories/khazad-dum/hosts.yml
+!inventories/baremetal/hosts.yml
+!inventories/smaug/hosts.yml
+!inventories/apple/hosts.yml

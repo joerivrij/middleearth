@@ -1,0 +1,165 @@
+---
+- name: Create and prepare the selected machines
+  ansible.builtin.import_playbook: machines.yml
+
+- name: Install single-node k0s on prepared machines
+  hosts: provisioned_machines
+  gather_facts: true
+  become: false
+  pre_tasks:
+    - name: Select single-node settings
+      ansible.builtin.set_fact:
+        k0s_cluster_name: "{{ k0s_cluster_name | default('khazad-dum') }}"
+        k0s_node_name: "{{ k0s_node_name | default(k0s_cluster_name | default('khazad-dum')) }}"
+        k0s_controller_single: true
+        k0s_controller_enable_worker: false
+        k0s_node_role: controller
+        k0s_generated_config_path: "{{ k0s_generated_config_path | default((playbook_dir | dirname) ~ '/machine-build/' ~ inventory_hostname ~ '-k0s.yaml') }}"
+        kubeconfig_path: "{{ kubeconfig_path | default((playbook_dir | dirname) ~ '/machine-build/' ~ inventory_hostname ~ '.kubeconfig') }}"
+
+    - name: Remember the original machine hostname
+      ansible.builtin.set_fact:
+        machine_k0s_previous_hostname: "{{ ansible_facts.hostname }}"
+
+    - name: Set the Kubernetes node hostname
+      ansible.builtin.hostname:
+        name: "{{ k0s_node_name }}"
+      become: true
+      register: machine_k0s_hostname
+
+    - name: Discover the machine guest address
+      ansible.builtin.command:
+        argv: [hostname, -I]
+      register: machine_k0s_guest_addresses
+      changed_when: false
+
+    - name: Select the machine guest address
+      ansible.builtin.set_fact:
+        machine_k0s_guest_ip: "{{ k0s_node_address | default(machine_k0s_guest_addresses.stdout.split()[0]) }}"
+
+    - name: Create the local configuration directory
+      ansible.builtin.file:
+        path: "{{ k0s_generated_config_path | dirname }}"
+        state: directory
+        mode: "0700"
+      delegate_to: localhost
+      become: false
+
+    - name: Render the address-aware k0s configuration
+      when: k0s_config_source | default('') | length == 0
+      ansible.builtin.template:
+        src: >-
+          {{ playbook_dir | dirname }}/templates/single-node-k0s.yaml.j2
+        dest: "{{ k0s_generated_config_path }}"
+        mode: "0600"
+      delegate_to: localhost
+      become: false
+
+    - name: Select the generated configuration unless a custom source was supplied
+      ansible.builtin.set_fact:
+        k0s_config_source: "{{ k0s_generated_config_path }}"
+      when: k0s_config_source | default('') | length == 0
+
+  roles:
+    - role: k0s
+      become: true
+      tags: [k0s]
+  post_tasks:
+    - name: Apply pending k0s configuration changes
+      ansible.builtin.meta: flush_handlers
+
+    - name: Restart k0s after changing the node hostname
+      ansible.builtin.service:
+        name: k0scontroller
+        state: restarted
+      become: true
+      when: machine_k0s_hostname is changed
+
+    - name: Wait for the Kubernetes API
+      ansible.builtin.command:
+        argv: [k0s, kubectl, get, --raw=/readyz]
+      become: true
+      register: machine_k0s_api_ready
+      changed_when: false
+      retries: 60
+      delay: 2
+      until: machine_k0s_api_ready.rc == 0
+
+    - name: Wait for the correctly named Kubernetes node
+      ansible.builtin.command:
+        argv: [k0s, kubectl, get, node, "{{ k0s_node_name }}"]
+      become: true
+      register: machine_k0s_named_node
+      changed_when: false
+      retries: 30
+      delay: 2
+      until: machine_k0s_named_node.rc == 0
+
+    - name: Remove the stale pre-rename node registration
+      ansible.builtin.command:
+        argv:
+          - k0s
+          - kubectl
+          - delete
+          - node
+          - "{{ machine_k0s_previous_hostname }}"
+          - --ignore-not-found=true
+      become: true
+      when:
+        - machine_k0s_hostname is changed
+        - machine_k0s_previous_hostname != k0s_node_name
+      changed_when: true
+
+    - name: Generate the administrator kubeconfig
+      ansible.builtin.command:
+        argv: [k0s, kubeconfig, admin]
+      become: true
+      register: machine_k0s_admin_kubeconfig
+      changed_when: false
+      no_log: true
+
+    - name: Normalize the administrator kubeconfig
+      ansible.builtin.set_fact:
+        machine_k0s_normalized_kubeconfig:
+          apiVersion: v1
+          kind: Config
+          clusters:
+            - name: "{{ k0s_cluster_name }}"
+              cluster: >-
+                {{ (machine_k0s_admin_kubeconfig.stdout | from_yaml)
+                   .clusters[0].cluster
+                   | combine({
+                     'server': k0s_api_endpoint | default('https://' ~ machine_k0s_guest_ip ~ ':6443')
+                   }) }}
+          users:
+            - name: "{{ k0s_cluster_name }}-admin"
+              user: >-
+                {{ (machine_k0s_admin_kubeconfig.stdout | from_yaml)
+                   .users[0].user }}
+          contexts:
+            - name: "{{ k0s_cluster_name }}"
+              context:
+                cluster: "{{ k0s_cluster_name }}"
+                namespace: default
+                user: "{{ k0s_cluster_name }}-admin"
+          current-context: "{{ k0s_cluster_name }}"
+      no_log: true
+
+    - name: Create the kubeconfig directory
+      ansible.builtin.file:
+        path: "{{ kubeconfig_path | dirname }}"
+        state: directory
+        mode: "0700"
+      delegate_to: localhost
+      become: false
+
+    - name: Store the kubeconfig on the operator host
+      ansible.builtin.copy:
+        content: >-
+          {{ machine_k0s_normalized_kubeconfig
+             | to_nice_yaml(indent=2, sort_keys=false) }}
+        dest: "{{ kubeconfig_path }}"
+        mode: "0600"
+      delegate_to: localhost
+      become: false
+      no_log: true

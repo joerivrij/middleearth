@@ -12,8 +12,20 @@ cpus: {{ machine_cpus }}
 memory: "{{ machine_memory_gib }}GiB"
 disk: "{{ machine_disk_gib }}GiB"
 
+{% if machine_lima_additional_disks | length > 0 %}
+additionalDisks:
+{% for disk in machine_lima_additional_disks %}
+  - name: "{{ disk.name }}"
+    format: false
+{% endfor %}
+{% endif %}
+
 networks:
+{% if machine_lima_networks | length > 0 %}
+{{ machine_lima_networks | to_nice_yaml(indent=2) | indent(2, true) }}
+{% else %}
   - {{ machine_lima_network }}: true
+{% endif %}
 
 {% if machine_lima_kubernetes_api_host_port | int > 0
    or machine_lima_http_host_port | int > 0

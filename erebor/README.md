@@ -1,135 +1,177 @@
 # Erebor
 
-Erebor is the Ceph and storage laboratory for Middle-earth. Its first
-environment is a local k0s test cluster managed by Flux, running in an Apple
-`container machine` backed by an OCI image.
+Erebor owns Ceph and storage experiments. Imladris creates or connects to Linux
+hosts; Khazad-dûm supplies the Kubernetes platform and optional Rook overlays.
 
-Erebor owns storage experiments and their machine-specific assets. Reusable
-machine provisioning belongs in Imladris, while the shared Kubernetes platform
-and Erebor's optional deployment overlays belong in Khazad-dûm.
-
-## Create the cluster
-
-Requirements: macOS 26, Apple container, Ansible, the Cilium CLI, kubectl, and
-Flux. Imladris provisions the machine over regular SSH; `container machine
-run` is not used.
-
-Create one reusable Apple-machine keypair on macOS, similar to a key shared by
-a fleet of Raspberry Pis:
-
-```bash
-ssh-keygen -t ed25519 -a 100 \
-  -f ~/.ssh/id_apple_machine \
-  -C "apple-container-machines"
-chmod 600 ~/.ssh/id_apple_machine
-chmod 644 ~/.ssh/id_apple_machine.pub
-```
-
-Keep the private key only in `~/.ssh` and back it up securely. The playbook
-requires this keypair, stages only `id_apple_machine.pub` into the ignored image
-build context, and bakes that public key into every machine image. It uses
-`~/.ssh/id_apple_machine` for Ansible connections and discovers each machine's
-IP automatically. Neither Apple `.test` DNS nor your personal
-`authorized_keys` is required.
-
-```bash
-make -C imladris erebor
-make -C khazad-dum bootstrap CLUSTER=khazad-dum \
-  KUBECONFIG=../erebor/machine/kubeconfig
-```
-
-The Imladris Erebor profile first builds `kernel/Image`, using Apple's current machine kernel
-configuration as its baseline and adding the socket and TPROXY netfilter
-features required by Cilium's L7 proxy plus the eBPF JIT required by Cilium's
-datapath. It then builds a Debian 13 systemd
-image, creates the persistent Apple container machine with that kernel, waits
-for OpenSSH, installs k0s through SSH, retrieves the kubeconfig, and seeds
-Cilium (including Envoy) so Flux can start on the custom-CNI cluster. The
-generated `kernel/base.config` and `kernel/Image` are intentionally ignored by
-Git.
-
-The first kernel build takes a few minutes. Apple container's BuildKit machine
-may need more resources than its default for this; for example:
-
-```bash
-container builder stop
-container builder delete
-container builder start --cpus 6 --memory 8G
-```
-
-The image also makes the guest VM's root mount recursively shared before k0s
-starts, which Cilium requires for BPF and cgroup v2 mount propagation.
-
-When the machine image, custom kernel, or shared Apple-machine SSH key changes,
-recreate an existing machine explicitly:
-
-```bash
-ansible-playbook -i imladris/inventories/erebor/hosts.yml \
-  imladris/playbooks/erebor.yml -e machine_container_recreate=true
-```
-
-Rook on Bilbo uses a 10 GiB sparse file attached as `/dev/loop0`, because Apple
-container machines do not currently expose a secondary-disk attachment option.
-The custom kernel includes loop and device-mapper support, and the Rook operator
-is explicitly configured to accept loop devices. The kernel build also stages
-its matching loadable RBD and Ceph modules into the Debian machine image so
-Ceph-CSI can load `rbd.ko`. This is test storage: it shares the VM's root disk
-and is not an HA or production Ceph layout.
-
-After changing the kernel configuration, rebuild it and recreate the VM:
-
-```bash
-ansible-playbook -i imladris/inventories/erebor/hosts.yml \
-  imladris/playbooks/erebor.yml \
-  -e kernel_rebuild=true \
-  -e machine_container_recreate=true
-```
-
-The bootstrap assumes the repository is public. No Git credentials or deploy
-key are stored in the cluster. Commit the bootstrap manifests to `main` before
-expecting reconciliation to become ready.
-
-## Shared automation and platform
-
-Erebor is now a consumer of the two reusable foundations:
+| Profile | Storage ownership | Status |
+| --- | --- | --- |
+| Bilbo | Rook manages Ceph inside Kubernetes. | Minimal single-node development lab. |
+| Smaug | Ansible bootstraps standalone Ceph with cephadm; Kubernetes optionally consumes it through Rook. | New flow, awaiting live testing. |
+| Thorin | Rook manages a complete multi-node Ceph deployment. | Future design; current overlay is a scaffold inheriting Bilbo. |
 
 ```text
-imladris/
-├── inventories/erebor/          # Erebor machine profile
-└── playbooks/erebor.yml
-
-khazad-dum/
-├── infrastructure/base/         # shared Kubernetes platform
-└── clusters/khazad-dum/
-    └── azanulbizar/erebor.yaml   # stable opt-in Erebor entrypoint
-
-erebor/
-├── cluster/                      # selects one Erebor overlay
-└── clusters/                     # Bilbo, Thorin, and Smaug composition
+imladris/roles/machine/       # baremetal, Lima, Apple Container Machine
+imladris/apple_machine/      # reusable Apple kernel and Linux system image
+imladris/playbooks/          # compose machine preparation with k0s or Ceph
+erebor/roles/ceph/           # standalone Ceph bootstrap, hosts, OSDs, RBD pool
+erebor/roles/ceph_loop/      # Bilbo-only loop device preparation
+erebor/machine/             # Bilbo loop-device helper and service
+erebor/cluster/             # selects the Kubernetes consumer profile
+erebor/clusters/            # Bilbo, Smaug, Thorin Flux compositions
+khazad-dum/apps/erebor/      # Rook operator and cluster overlays
 ```
 
-Imladris owns machine lifecycle, reusable Linux roles, k0s installation, and
-kubeconfig generation. Erebor keeps only its custom kernel and machine-image
-assets. Khazad-dûm owns Flux, Cilium, cert-manager, Traefik, metrics-server, and
-the optional Rook/Ceph addition selected by Erebor.
+## Bilbo: simple Rook-managed Ceph
 
-Select an overlay only in `erebor/cluster/kustomization.yaml`, then enable
-`azanulbizar/erebor.yaml` in Khazad-dûm. Khazad-dûm never needs to know which
-Erebor overlay is active.
+Requires macOS with Apple Container Machine, Ansible, and the shared SSH
+keypair. Create it once if needed:
 
-## Cluster overlays
+```sh
+ssh-keygen -t ed25519 -a 100 -f ~/.ssh/id_apple_machine -C apple-container-machines
+```
 
-- `bilbo` — “An Unexpected Journey”: the minimal, single-node development
-  cluster.
-- `thorin` — “The King Under the Mountain”: the standard homelab and HA
-  deployment.
-- `smaug` — “The Dragon’s Hoard”: large-scale storage and performance testing.
+From the repository root:
 
-Bilbo corresponds to the previous small overlay, Thorin to medium, and Smaug to
-large. See the
-[overlay guide](../khazad-dum/apps/erebor/overlays/README.md) for the full story
-and infrastructure mapping.
+```sh
+make -C imladris erebor
+make -C khazad-dum install \
+  SINGLE_NODE_KUBECONFIG=../imladris/machine-build/erebor.kubeconfig
+```
 
-Thorin and Smaug currently inherit Bilbo's loop-backed test device. Their HA
-replica settings describe the intended future multi-node topology; they require
-real, independent raw disks before they can provide meaningful redundancy.
+Select `../clusters/bilbo` in `erebor/cluster/kustomization.yaml` and enable
+`azanulbizar/erebor.yaml` in `khazad-dum/clusters/khazad-dum/kustomization.yaml`.
+Commit and push these manifests before expecting Flux to reconcile them.
+
+Bilbo uses a 10 GiB sparse file attached as `/dev/loop0`. It shares the guest
+root disk and provides no independent redundancy. The loop helper is installed
+by Erebor after k0s provisioning; it is no longer baked into the reusable
+Apple image. The custom kernel retains loop, device-mapper, RBD/Ceph modules,
+and Cilium networking support. Generated kernel/module artifacts remain ignored.
+
+The first kernel build can require a larger Apple builder, for example
+`container builder start --cpus 6 --memory 8G` after stopping/deleting the old
+builder. Rebuild the kernel and recreate a disposable Bilbo machine explicitly:
+
+```sh
+cd imladris
+ansible-playbook -i inventories/erebor/hosts.yml playbooks/erebor.yml \
+  -e kernel_rebuild=true -e machine_container_recreate=true
+```
+
+Old paths `erebor/kernel`, `erebor/machine/Containerfile`, and
+`khazad-dum/apple_machine` are superseded by `imladris/apple_machine`.
+Kubeconfigs now live in `imladris/machine-build/`.
+
+## Smaug: standalone Ceph
+
+The default example creates a Debian Lima VM and two independent 20 GiB virtual
+OSD disks. It bootstraps Ceph 19.2.3 with cephadm, applies explicit OSD device
+specifications, and creates the `smaug-rbd` pool with two replicas on one host.
+This is a development topology, not host-level HA. No k0s is installed here.
+
+Before running:
+
+1. Configure Lima's `shared` socket_vmnet network following the
+   [Lima VM networking guide](https://lima-vm.io/docs/config/network/vmnet/).
+   The inventory selects `lima: shared` on `lima0`. The default `vzNAT` network
+   does not permit guest-to-guest access.
+2. Put the Kubernetes consumer VMs on the same reachable network. In their
+   inventory, set `machine_lima_networks: [{lima: shared, interface: lima0}]`
+   before creating them. External consumers need routes to all monitor and
+   OSD addresses; forwarding only the Kubernetes API does not provide this.
+3. Review `imladris/inventories/smaug/hosts.yml`, especially
+   `machine_guest_vars.ceph_osd_devices`. These disks will be used for Ceph.
+   The example expects `/dev/vdb` and `/dev/vdc`; confirm names with `lsblk`
+   when changing the VM configuration.
+
+```sh
+# Optional first step: create only, then inspect disks with limactl shell smaug lsblk.
+make -C imladris machines INVENTORY=inventories/smaug/hosts.yml
+make -C imladris smaug
+limactl shell smaug sudo cephadm shell -- ceph -s
+```
+
+The role never selects all available disks or zaps devices. Ceph requires
+unused raw devices. Lima disks are created with formatting disabled and are
+retained when the VM is reset; deleting/recreating a VM is not a Ceph data
+reset. A fresh bootstrap against old OSD disks requires a deliberate recovery
+or separate disk cleanup workflow.
+
+For existing bare-metal hosts, use the Imladris bare-metal inventory pattern
+and set per-host `ceph_osd_devices` and `ceph_address` in `machine_guest_vars`.
+Set `ceph_address_interface: ""` when not using Lima's `lima0`. For multiple
+hosts, set `ceph_single_host: false` and choose `ceph_pool_size` /
+`ceph_pool_min_size` for that topology. Each host needs a unique hostname and
+mutually reachable SSH/Ceph addresses. The first registered host bootstraps
+Ceph and distributes its orchestration public key to the remaining hosts.
+Smaug's role currently supports Debian hosts.
+
+Apple machines can use the same preparation flow, but need usable raw OSD
+storage supplied separately; Bilbo's loop device is not implicitly enabled
+for Smaug.
+
+## Optional Smaug consumer on k0s
+
+Create the consumer independently with Imladris and install Khazad-dûm:
+
+```sh
+make -C imladris machines-k0s K0S_INVENTORY=inventories/khazad-dum/hosts.yml
+make -C khazad-dum install
+```
+
+On a fresh consumer, select `../clusters/smaug` in
+`erebor/cluster/kustomization.yaml`, then enable `azanulbizar/erebor.yaml` in
+the Khazad-dûm cluster. Commit/push and reconcile Flux. Smaug deploys its own
+external-mode HelmRelease and disables loop-device support. It inherits no
+Bilbo/Thorin pools, object stores, local OSDs, or ingress routes.
+
+Switching an existing Bilbo/Thorin deployment to Smaug is not a data migration:
+Flux/Helm can prune the old local storage resources. Use a fresh consumer for
+this flow and migrate existing data separately.
+
+Rook still needs the provider connection data and scoped CSI credentials.
+Follow the version-matched Rook
+[provider export](https://rook.io/docs/rook/v1.19/CRDs/Cluster/external-cluster/provider-export/)
+and [consumer import](https://rook.io/docs/rook/v1.19/CRDs/Cluster/external-cluster/consumer-import/)
+steps. Use the scripts from the `v1.19.5` Rook checkout to match the Helm chart.
+
+On the provider, place `deploy/examples/create-external-cluster-resources.py`
+from that checkout in `/root/rook-export/`, then run as root:
+
+```sh
+umask 077
+cephadm shell --mount /root/rook-export -- \
+  python3 /mnt/rook-export/create-external-cluster-resources.py \
+  --rbd-data-pool-name smaug-rbd --namespace rook-ceph \
+  --k8s-cluster-name khazad-dum --restricted-auth-permission \
+  --format bash > /root/smaug-external.env
+```
+
+Securely copy the exported file to the operator machine. From a Bash shell
+with the consumer kubeconfig selected, use Rook's matching import script:
+
+```sh
+export KUBECONFIG=/absolute/path/to/imladris/machine-build/khazad-dum.kubeconfig
+export NAMESPACE=rook-ceph
+source /secure/path/smaug-external.env
+source /path/to/rook-v1.19.5/deploy/examples/import-external-cluster.sh
+kubectl -n rook-ceph get cephcluster
+kubectl get storageclass ceph-rbd
+```
+
+The import creates connection secrets and the `ceph-rbd` StorageClass. Use
+`storageClassName: ceph-rbd` in consumer PVCs. Connection secrets and exports
+must remain outside Git. The standalone Ceph cluster remains usable without
+this Kubernetes integration.
+
+## Validation
+
+```sh
+make -C imladris syntax
+make -C khazad-dum validate
+kustomize build erebor/clusters/smaug
+```
+
+These validate local configuration; live VM, Ceph readiness, and PVC I/O checks
+are still required. Ceph provisioning follows the
+[cephadm bootstrap workflow](https://docs.ceph.com/en/squid/cephadm/install/).

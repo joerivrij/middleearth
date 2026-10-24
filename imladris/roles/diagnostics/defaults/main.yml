@@ -1,0 +1,15 @@
+---
+diagnostics_disk_packages:
+  - smartmontools
+  - usbutils
+  - iotop
+  - sysstat
+  - hdparm
+  - nvme-cli
+diagnostics_network_packages:
+  - iproute2
+  - iputils-ping
+  - dnsutils
+  - ethtool
+  - tcpdump
+  - traceroute

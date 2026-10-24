@@ -4,22 +4,32 @@ metadata:
   name: rook-ceph-cluster
   namespace: rook-ceph
 spec:
+  interval: 10m
+  timeout: 30m
+  dependsOn:
+    - name: rook-ceph
+  chart:
+    spec:
+      chart: rook-ceph-cluster
+      version: v1.19.5
+      sourceRef:
+        kind: HelmRepository
+        name: rook-ceph
   values:
+    operatorNamespace: rook-ceph
     cephClusterSpec:
-      cephConfig:
-        global:
-          osd_pool_default_size: "3"
-    cephBlockPools:
-      - name: replicapool
-        spec:
-          failureDomain: host
-          replicated:
-            size: 3
-            requireSafeReplicaSize: true
-        storageClass:
-          enabled: true
-          name: rook-ceph-block
-          isDefault: true
-          reclaimPolicy: Retain
-          allowVolumeExpansion: true
-          volumeBindingMode: WaitForFirstConsumer
+      external:
+        enable: true
+      crashCollector:
+        disable: true
+      dataDirHostPath: /var/lib/rook
+    # Provider owns pools and services. The import script creates the StorageClass.
+    cephBlockPools: []
+    cephFileSystems: []
+    cephObjectStores: []
+    cephObjectStoreUsers: []
+    cephFilesystemSubVolumeGroups: []
+    toolbox:
+      enabled: false
+    monitoring:
+      enabled: false

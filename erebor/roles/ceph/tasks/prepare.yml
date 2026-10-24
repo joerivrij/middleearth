@@ -1,0 +1,49 @@
+---
+- name: Validate Ceph host settings
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.os_family == "Debian"
+      - ceph_osd_devices | length > 0
+      - ceph_osd_devices | select('match', '^/dev/') | list | length == ceph_osd_devices | length
+    fail_msg: "Smaug currently supports Debian hosts with an explicit list of raw ceph_osd_devices."
+
+- name: Inspect the selected OSD devices
+  ansible.builtin.stat:
+    path: "{{ item }}"
+    follow: true
+  loop: "{{ ceph_osd_devices }}"
+  register: ceph_device_stats
+
+- name: Require actual block devices
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+      - item.stat.isblk | default(false)
+    fail_msg: "Selected Ceph OSD path is not a block device: {{ item.item }}"
+  loop: "{{ ceph_device_stats.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Install Ceph host dependencies
+  ansible.builtin.apt:
+    name: [podman, lvm2, chrony, openssh-server, python3, ca-certificates]
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Enable time synchronization
+  ansible.builtin.service:
+    name: chrony
+    state: started
+    enabled: true
+
+- name: Download the pinned standalone cephadm
+  ansible.builtin.get_url:
+    url: "{{ cephadm_url }}"
+    dest: /usr/local/sbin/cephadm
+    checksum: "{{ cephadm_checksum | default(omit, true) }}"
+    mode: "0755"
+
+- name: Record the address advertised to Ceph clients
+  ansible.builtin.set_fact:
+    ceph_address: "{{ ceph_address | default(ansible_facts[ceph_address_interface].ipv4.address if ceph_address_interface | length > 0 else ansible_facts.default_ipv4.address) }}"

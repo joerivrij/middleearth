@@ -1,0 +1,6 @@
+---
+- name: Greenway - optional diagnostics for the road
+  hosts: raspberry_pis
+  become: true
+  roles:
+    - role: diagnostics

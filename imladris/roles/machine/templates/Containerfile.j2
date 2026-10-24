@@ -18,6 +18,6 @@ RUN chmod 0600 /etc/ssh/imladris_authorized_keys && \
     printf '%s\n' \
       'PubkeyAuthentication yes' \
       'PasswordAuthentication no' \
-      'AuthorizedKeysFile /etc/ssh/imladris_authorized_keys' \
+      'AuthorizedKeysFile .ssh/authorized_keys /etc/ssh/imladris_authorized_keys' \
       > /etc/ssh/sshd_config.d/60-imladris-machine.conf
 

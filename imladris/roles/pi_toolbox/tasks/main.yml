@@ -1,0 +1,13 @@
+---
+- name: Require a Debian-based system
+  ansible.builtin.assert:
+    that: ansible_facts.os_family == 'Debian'
+    fail_msg: The Pi toolbox supports Raspberry Pi OS, Debian and Ubuntu.
+
+- name: Install the common Pi toolbox
+  ansible.builtin.apt:
+    name: "{{ pi_toolbox_packages + pi_toolbox_extra_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+    install_recommends: false

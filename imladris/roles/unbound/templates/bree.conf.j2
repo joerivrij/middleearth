@@ -1,0 +1,21 @@
+# Managed by Ansible.
+server:
+{% for address in unbound_interfaces %}
+    interface: {{ address }}
+{% endfor %}
+{% for network in unbound_allowed_networks %}
+    access-control: {{ network }} allow
+{% endfor %}
+    hide-identity: yes
+    hide-version: yes
+{% for record in unbound_local_records %}
+    local-data: {{ record | to_json }}
+{% endfor %}
+{% if unbound_forwarders | length > 0 %}
+
+forward-zone:
+    name: "."
+{% for address in unbound_forwarders %}
+    forward-addr: {{ address }}
+{% endfor %}
+{% endif %}

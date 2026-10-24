@@ -1,0 +1,4 @@
+---
+# Raspberry Pi OS 64-bit identifies as Debian; 32-bit identifies as Raspbian.
+tailscale_repository_distribution: "{{ 'raspbian' if ansible_facts.distribution == 'Raspbian' else ansible_facts.distribution | lower }}"
+tailscale_repository_release: "{{ ansible_facts.distribution_release }}"

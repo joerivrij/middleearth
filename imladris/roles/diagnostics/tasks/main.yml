@@ -1,0 +1,24 @@
+---
+- name: Require a Debian-based system
+  ansible.builtin.assert:
+    that: ansible_facts.os_family == 'Debian'
+    fail_msg: The diagnostics toolbox supports Debian-based systems.
+  tags: [always]
+
+- name: Install disk diagnostics
+  ansible.builtin.apt:
+    name: "{{ diagnostics_disk_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+    install_recommends: false
+  tags: [never, disks]
+
+- name: Install network diagnostics
+  ansible.builtin.apt:
+    name: "{{ diagnostics_network_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+    install_recommends: false
+  tags: [never, network]

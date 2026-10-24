@@ -1,0 +1,12 @@
+---
+ceph_version: 19.2.3
+ceph_image: "quay.io/ceph/ceph:v{{ ceph_version }}"
+cephadm_url: "https://download.ceph.com/rpm-{{ ceph_version }}/el9/noarch/cephadm"
+cephadm_checksum: ""
+ceph_single_host: false
+ceph_osd_devices: []
+ceph_pool_name: smaug-rbd
+ceph_pool_size: 3
+ceph_pool_min_size: 2
+ceph_hosts: "{{ groups['provisioned_machines'] }}"
+ceph_address_interface: ""

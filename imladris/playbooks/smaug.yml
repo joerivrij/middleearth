@@ -1,0 +1,20 @@
+---
+- name: Create and prepare the Ceph hosts
+  ansible.builtin.import_playbook: machines.yml
+
+- name: Prepare standalone Ceph hosts
+  hosts: provisioned_machines
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Prepare Ceph dependencies
+      ansible.builtin.import_role:
+        name: ../../erebor/roles/ceph
+        tasks_from: prepare
+
+- name: Bootstrap and configure standalone Ceph
+  hosts: provisioned_machines[0]
+  become: true
+  gather_facts: false
+  roles:
+    - role: ../../erebor/roles/ceph

@@ -21,6 +21,12 @@
       Create the configured Apple machine SSH keypair before provisioning.
   when: machine_state == "present"
 
+- name: Prepare the custom Apple machine image
+  ansible.builtin.include_tasks: apple-image.yml
+  when:
+    - machine_state == "present"
+    - machine_container_build_kernel | bool
+
 - name: Start the Apple container service
   ansible.builtin.command:
     argv: [container, system, start]
@@ -148,4 +154,9 @@
     host: "{{ (running_container_machine.stdout | from_json | first).ipAddress }}"
     port: 22
     timeout: 180
+  when: machine_state == "present"
+
+- name: Apply inventory guest variables
+  ansible.builtin.add_host:
+  args: "{{ machine_guest_vars | combine({'name': 'container-' ~ machine_name}) }}"
   when: machine_state == "present"

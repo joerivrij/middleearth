@@ -1,13 +1,14 @@
 ---
-- name: Create local Linux machines
+- name: Create or connect to Linux machines
   hosts: machine_hosts
+  serial: 1
   gather_facts: true
   become: false
   roles:
     - role: machine
       tags: [machine]
 
-- name: Prepare created Linux machines
+- name: Prepare selected Linux machines
   hosts: provisioned_machines
   become: true
   gather_facts: true

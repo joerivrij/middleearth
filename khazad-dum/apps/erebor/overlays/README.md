@@ -1,40 +1,19 @@
-# Erebor add-on overlays
+# Erebor storage profiles
 
-```text
-apps/erebor/overlays/
-├── bilbo
-├── thorin
-└── smaug
-```
-
-## Bilbo — “An Unexpected Journey”
-
-Minimal development cluster.
-
-## Thorin — “The King Under the Mountain”
-
-Standard homelab / HA deployment.
-
-## Smaug — “The Dragon’s Hoard”
-
-Large-scale storage and performance testing.
-
-The names also map surprisingly well to what the environments represent:
-
-| Overlay | Story | Infrastructure analogy |
-| --- | --- | --- |
-| `bilbo` | The unexpected journey begins. | Small, single-node experiment, proving the concept. |
-| `thorin` | Reclaiming Erebor and building a kingdom. | A realistic HA cluster for day-to-day development and testing. |
-| `smaug` | The dragon sitting on an enormous hoard. | The largest cluster with lots of storage and resources. |
-
-The previous size names map as follows:
-
-| Overlay | Size |
+| Profile | Purpose |
 | --- | --- |
-| `bilbo` | Small |
-| `thorin` | Medium |
-| `smaug` | Large |
+| `bilbo` | Minimal, single-node Rook-managed Ceph with a development loop device. |
+| `smaug` | External Ceph consumer: Ansible/cephadm owns the provider; Rook configures Kubernetes access. |
+| `thorin` | Future complete Rook-managed deployment; currently a scaffold inheriting Bilbo. |
 
-Each environment is split into component-level Kustomize overlays. The Flux
-Kustomizations in `erebor/clusters/` reference those components separately
-instead of applying an entire environment in one reconciliation.
+These names describe storage ownership and use, rather than small/medium/large
+sizes. Thorin's inherited loop device must be replaced by independent raw disks
+before its replica settings can provide meaningful redundancy.
+
+`erebor/cluster/kustomization.yaml` selects a profile. Smaug is independent of
+Bilbo and Thorin and contains no locally managed Ceph pools or object stores.
+It requires provider credentials imported separately. See the
+[Erebor guide](../../../../erebor/README.md) for provisioning and import steps.
+
+Use a fresh Kubernetes consumer for Smaug: selecting external mode over an
+existing local Rook deployment does not migrate its data.

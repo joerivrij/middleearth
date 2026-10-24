@@ -1,0 +1,4 @@
+---
+# Compatibility entrypoint; backend selection now lives in the inventory.
+- name: Provision machines and install k0s
+  ansible.builtin.import_playbook: machines-k0s.yml

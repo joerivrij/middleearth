@@ -3,9 +3,9 @@ middleearth_dir: "{{ playbook_dir | dirname | dirname }}"
 erebor_dir: "{{ middleearth_dir }}/erebor"
 
 machine_container_image: local/erebor-machine:latest
-machine_container_custom_build_context: "{{ erebor_dir }}/machine"
-machine_container_custom_containerfile: "{{ erebor_dir }}/machine/Containerfile"
-machine_container_kernel: "{{ erebor_dir }}/kernel/Image"
+machine_container_custom_build_context: "{{ apple_machine_dir }}/machine"
+machine_container_custom_containerfile: "{{ apple_machine_dir }}/machine/Containerfile"
+machine_container_kernel: "{{ apple_machine_dir }}/kernel/Image"
 machine_container_ssh_private_key: >-
   {{ lookup('env', 'HOME') }}/.ssh/id_apple_machine
 machine_container_ssh_public_key: "{{ machine_container_ssh_private_key }}.pub"
@@ -15,10 +15,16 @@ machine_memory_gib: 8
 
 k0s_version: v1.35.2+k0s.0
 k0s_node_role: controller
-k0s_controller_enable_worker: true
-k0s_config_source: "{{ erebor_dir }}/machine/k0s.yaml"
-kubeconfig_path: "{{ erebor_dir }}/machine/kubeconfig"
+k0s_controller_enable_worker: false
+k0s_controller_single: true
+k0s_cluster_name: erebor
+k0s_node_name: erebor
+k0s_generated_config_path: "{{ middleearth_dir }}/imladris/machine-build/erebor-k0s.yaml"
+kubeconfig_path: "{{ middleearth_dir }}/imladris/machine-build/erebor.kubeconfig"
 
 kernel_rebuild: false
 imladris_users: []
 
+
+apple_machine_dir: "{{ middleearth_dir }}/imladris/apple_machine"
+machine_container_build_kernel: true

@@ -12,7 +12,7 @@ its implementation into them.
 ```text
 middleearth/
 ├── bree/
-│   └── workstation bootstrap
+│   └── Pi toolbox, diagnostics, Bree services and workstation bootstrap
 ├── imladris/
 │   └── Ansible and machine provisioning
 ├── khazad-dum/
@@ -41,7 +41,7 @@ middleearth/
 
 | Project | Responsibility |
 | --- | --- |
-| [Bree](bree/README.md) | Bootstrap the operator's workstation. |
+| [Bree](bree/README.md) | Bootstrap Pi tools, diagnostics, Bree's services and the operator's workstation. |
 | [Imladris](imladris/README.md) | Provision Linux machines with reusable Ansible roles. |
 | [Khazad-dûm](khazad-dum/README.md) | Provide the reusable Kubernetes and Flux platform. |
 | [Eregion](eregion/README.md) | Explore libvirt, QEMU, cloud-init, vsock, and VM images. |
