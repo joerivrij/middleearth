@@ -6,10 +6,10 @@ inventory live here; reusable roles live in Imladris.
 
 | Profile | Purpose |
 | --- | --- |
-| `prancing-pony` | Shared Pi essentials: fzf, btop, ripgrep, fd, bat, tmux, ncdu, jq, curl, wget, git, unzip, lsof and tree. |
+| `prancing-pony` | Shared Pi essentials: fzf, btop, ripgrep, fd, bat, tmux, ncdu, jq, curl, wget, git, unzip, lsof and tree, plus Zsh and the Starship prompt. |
 | `greenway --tags disks` | SMART, USB, disk I/O, SATA and NVMe diagnostics. |
 | `greenway --tags network` | ip/ss, ping, dig, ethtool, tcpdump and traceroute. |
-| `bree` | Shared toolbox plus tailscaled and Unbound. |
+| `bree` | Shared toolbox, gopass, Kubernetes access tools, Tailscale subnet routing and dnsmasq. |
 | `workstation` | Original local zsh, Starship and gopass setup. |
 
 ## Run from your controller
@@ -64,6 +64,84 @@ Override `pi_toolbox_extra_packages` to add essentials, or replace
 `pi_toolbox_packages`, `diagnostics_disk_packages` or
 `diagnostics_network_packages` in inventory variables.
 
+Prancing Pony installs Zsh, makes it the SSH user's login shell, and installs
+Starship into `/usr/local/bin` using its official installer (only when absent).
+The first installation needs HTTPS access to starship.rs and GitHub.
+It configures the user's Bash and Zsh startup files with a managed block,
+preserving other settings. Zsh gets history, completion and Emacs keybindings.
+It enables fzf's Ctrl-R history search, Ctrl-T file selection and Alt-C
+directory selection, adds `ll`, `..` and `...`, and makes Debian's `batcat` and
+`fdfind` available as `bat` and `fd`. Reconnect after provisioning, or run
+`exec zsh` to switch an existing session. Run `btop` for the process monitor;
+existing tools such as htop are retained. Midnight Commander (`mc`) from the
+previous toolbox is removed on the next run.
+Set `pi_toolbox_configure_shell: false` to skip shell setup and Starship.
+For Starship's default icons, select a Nerd Font in your client terminal.
+The `bree` profile includes this same toolbox and shell configuration.
+
+## Bree's access tools
+
+The Bree profile adds gopass from its official signed APT repository, GnuPG,
+terminal pinentry, kubectl, Krew, and the distro's `kubectx` package (which also
+provides `kubens`). Krew is installed per user under `~/.krew` from the official
+release, with its archive checksum verified; `bree_access_krew_version` pins
+the bootstrap installer version. Subsequent upgrades use `kubectl krew upgrade`.
+Its `bin` directory is added to Bash and Zsh's PATH. Both shells get the `k`
+alias and `GPG_TTY` for terminal passphrase prompts; Zsh also gets kubectl
+completion. Install or update just these tools with:
+
+```sh
+./bree/bootstrap.sh bree --tags access
+```
+
+`bree_access_kubectl_minor` selects the Kubernetes APT release stream, defaulting
+to `v1.35` for the existing Hellas cluster. Keep it within one minor release of
+both cluster API servers; verify Hellenistike's version before using it there.
+The intended contexts are `hellenistike-odysseia` and `hellas-odysseia`.
+
+Credentials are a separate recovery step. To reuse the existing gopass system,
+import the shared GPG key and clone the same remote password store on Bree.
+For example, from an already configured controller, replacing `FINGERPRINT`:
+
+```sh
+gpg --export-secret-keys FINGERPRINT | ssh pi@bree 'gpg --import'
+```
+
+Then on Bree, use the actual existing password-store Git URL:
+
+```sh
+gopass clone YOUR_EXISTING_STORE_GIT_URL
+gopass ls
+```
+
+Git authentication to that remote must also be configured. If GPG asks about
+recipient trust, verify the imported fingerprint and set its ownertrust with
+`gpg --edit-key FINGERPRINT` and `trust`. Retain the store and key backups on
+your other machines so Bree can be rebuilt independently.
+
+To import a prepared, self-contained kubeconfig from the controller, opt in:
+
+```sh
+./bree/bootstrap.sh bree --tags access \
+  -e bree_access_kubeconfig_src=/absolute/path/to/prepared-kubeconfig
+```
+
+This replaces the SSH user's `~/.kube/config` with mode `0600`, suppressing its
+contents from Ansible logs and diffs. Use a kubeconfig containing the intended
+contexts with embedded certificates/keys; external credential plugins must be
+installed separately. The default empty source leaves existing credentials
+untouched. Never put the kubeconfig or GPG private key in the repository.
+Reconnect after provisioning, then use `kubectx`, `kubens`, or, explicitly:
+
+```sh
+kubectl --context hellas-odysseia get namespaces
+kubectl --context hellenistike-odysseia get namespaces
+kubectl krew version
+```
+
+This configures commands run on Bree; laptop SSH jump-host settings and DNS
+migration are separate steps.
+
 ## Bree's services
 
 The `bree` profile installs Tailscale from its signed APT repository and enables
@@ -77,37 +155,17 @@ The helper reads `bree/tailscale/auth` from the local gopass store and sends it
 over SSH. Set `GOPASS_ENTRY` or `SSH_KEY` to override those defaults. It skips
 reading gopass when the target is already authenticated.
 
-Unbound is a caching recursive resolver by default. Configure
-`ansible/inventories/bree/host_vars/bree.yml` before exposing DNS to clients:
+Bree now runs dnsmasq instead of Unbound. Shared LAN records live in
+[`dns/hosts`](dns/hosts), with DNS served at `192.168.1.151` on the LAN and
+`100.115.75.42` on Tailscale. It also advertises routes for the seven cluster
+node IPs, so those nodes do not need Tailscale installed.
 
-```yaml
-unbound_interfaces:
-  - 127.0.0.1
-  - 192.168.1.10       # replace with Bree's stable LAN address
-unbound_allowed_networks:
-  - 127.0.0.0/8
-  - 192.168.1.0/24     # replace with your client subnet
-unbound_forwarders: [] # or upstream DNS IPs for forwarding
-unbound_local_records:
-  - 'bree.home.arpa. IN A 192.168.1.10'
+```sh
+./bree/bootstrap.sh bree --tags dns,subnet
 ```
 
-It initially listens only on `127.0.0.1`. To use it over Tailscale, authenticate
-first, add Bree's stable Tailscale IP and allowed client CIDRs, then rerun with
-`./bree/bootstrap.sh bree --tags dns`. Listening on a specific tailnet IP also
-requires that address to be available when Unbound starts after a reboot.
-For hosts where that is unsuitable, use `0.0.0.0` with explicit client CIDRs
-and firewall rules. Permit UDP and TCP port 53 for the intended clients and
-configure the LAN DHCP server or tailnet DNS settings to use Bree. These
-network-wide settings are not changed by the playbook. Recursive mode needs
-outbound UDP/TCP 53; forwarding mode needs access to the chosen upstreams.
-
-The role validates its rendered configuration before installing it and checks
-the complete configuration before starting/restarting the service. It does
-not change the host's own resolver or disable existing DNS services. Resolve
-any existing port 53 listener conflict before enabling additional addresses.
-Test on Bree with `dig @127.0.0.1 example.com` after installing network tools,
-and repeat from a client against Bree's configured LAN/tailnet address.
+Client DNS settings, tailnet route approval, and access rules are separate.
+See [DNS and subnet routing](dns/README.md) for rollout, verification and rollback.
 
 ## Interactive workstation setup
 
@@ -117,6 +175,7 @@ and repeat from a client against Bree's configured LAN/tailnet address.
 ```
 
 This retains the original workstation bootstrap: it writes `~/.zshrc`, installs
-Starship and gopass, and selects zsh as your login shell. Pi and service profiles
-do not configure your shell. `eza` icons remain disabled by default; after
+Starship and gopass, and selects zsh as your login shell. The Ansible Pi and Bree
+profiles now configure Zsh and Starship too, while preserving existing startup
+files. `eza` icons in the workstation script remain disabled by default; after
 selecting a Nerd Font in your terminal, set `export EZA_ICONS=auto` in `~/.zshrc`.

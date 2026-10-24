@@ -11,3 +11,88 @@
     update_cache: true
     cache_valid_time: 3600
     install_recommends: false
+
+- name: Remove Midnight Commander from the previous toolbox
+  ansible.builtin.apt:
+    name: mc
+    state: absent
+
+- name: Configure the connecting user's interactive shell
+  when: pi_toolbox_configure_shell | bool
+  block:
+    - name: Install Zsh
+      ansible.builtin.apt:
+        name: zsh
+        state: present
+        install_recommends: false
+
+    - name: Create the Starship installer directory
+      ansible.builtin.file:
+        path: /usr/local/share/prancing-pony
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Check whether Starship is installed
+      ansible.builtin.stat:
+        path: /usr/local/bin/starship
+      register: pi_toolbox_starship
+
+    - name: Download the official Starship installer
+      ansible.builtin.get_url:
+        url: https://starship.rs/install.sh
+        dest: /usr/local/share/prancing-pony/install-starship.sh
+        owner: root
+        group: root
+        mode: '0700'
+      when:
+        - not pi_toolbox_starship.stat.exists
+        - not ansible_check_mode
+
+    - name: Install Starship for the target architecture
+      ansible.builtin.command:
+        argv:
+          - /bin/sh
+          - /usr/local/share/prancing-pony/install-starship.sh
+          - --yes
+          - --bin-dir
+          - /usr/local/bin
+        creates: /usr/local/bin/starship
+
+    - name: Identify the connecting user
+      ansible.builtin.command: id -un
+      become: false
+      register: pi_toolbox_login_user
+      changed_when: false
+      check_mode: false
+
+    - name: Look up the connecting user's home directory
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ pi_toolbox_login_user.stdout }}"
+
+    - name: Make Zsh the connecting user's login shell
+      ansible.builtin.user:
+        name: "{{ pi_toolbox_login_user.stdout }}"
+        shell: /bin/zsh
+
+    - name: Install shared Bash and Zsh integration
+      ansible.builtin.template:
+        src: shell.sh.j2
+        dest: "{{ ansible_facts.getent_passwd[pi_toolbox_login_user.stdout][4] }}/.prancing-pony.sh"
+        owner: "{{ pi_toolbox_login_user.stdout }}"
+        mode: '0644'
+
+    - name: Load the toolbox from interactive shell startup files
+      ansible.builtin.blockinfile:
+        path: "{{ ansible_facts.getent_passwd[pi_toolbox_login_user.stdout][4] }}/{{ item }}"
+        create: true
+        owner: "{{ pi_toolbox_login_user.stdout }}"
+        mode: '0644'
+        marker: '# {mark} ANSIBLE MANAGED PRANCING PONY'
+        block: |
+          [ -r "$HOME/.prancing-pony.sh" ] && . "$HOME/.prancing-pony.sh"
+      loop:
+        - .bashrc
+        - .zshrc

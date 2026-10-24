@@ -16,3 +16,4 @@ pi_toolbox_packages:
   - lsof
   - tree
 pi_toolbox_extra_packages: []
+pi_toolbox_configure_shell: true

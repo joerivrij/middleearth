@@ -1,10 +1,24 @@
 ---
-# Start locally. To serve the LAN/tailnet, add Bree's stable addresses here
-# and the corresponding client CIDRs below. Ensure UDP and TCP port 53 are
-# reachable only by those clients; tailnet access also depends on tailnet ACLs.
-unbound_interfaces:
+# Reserve 192.168.1.151 in DHCP. DNS is available on LAN and tailnet only.
+dnsmasq_listen_addresses:
   - 127.0.0.1
-unbound_allowed_networks:
-  - 127.0.0.0/8
-unbound_forwarders: []
-unbound_local_records: []
+  - 192.168.1.151
+  - 100.115.75.42
+dnsmasq_hosts_src: "{{ playbook_dir }}/../../dns/hosts"
+dnsmasq_local_domains:
+  - odysseia-greek
+  - home.arpa
+dnsmasq_upstreams:
+  - 1.1.1.1
+  - 9.9.9.9
+
+# Only the cluster node addresses, rather than the entire household LAN.
+tailscale_subnet_enabled: true
+tailscale_subnet_routes:
+  - 192.168.1.121/32
+  - 192.168.1.122/32
+  - 192.168.1.123/32
+  - 192.168.1.124/32
+  - 192.168.1.131/32
+  - 192.168.1.132/32
+  - 192.168.1.133/32
